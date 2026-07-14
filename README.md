@@ -83,9 +83,14 @@ Your Majik Key is generated entirely offline. No network request is made during 
 
 Majik Key is the shared identity layer underneath every Majikah product. Here is what the Rust crate provides as the foundation for downstream integrations.
 
-### Majik Signature
+### [Majik Signature](https://majikah.solutions/products/majik-signature) — Flagship
 
 **Post-quantum cryptographic file signing and verification.**
+
+[![npm](https://img.shields.io/npm/v/@majikah/majik-signature)](https://www.npmjs.com/package/@majikah/majik-signature) [![npm downloads](https://img.shields.io/npm/dm/@majikah/majik-signature)](https://www.npmjs.com/package/@majikah/majik-signature) [![npm bundle size](https://img.shields.io/bundlephobia/min/%40majikah%2Fmajik-signature)](https://bundlephobia.com/package/@majikah/majik-signature) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+[![Majik Signature Hero](https://github.com/user-attachments/assets/781bb778-9535-4b1f-bbc5-820550ecc864)](https://signature.majikah.solutions)
+
 
 The Rust crate exposes the core cryptographic material needed for hybrid signing workflows, including Ed25519 and ML-DSA-87 secrets and public keys.
 
