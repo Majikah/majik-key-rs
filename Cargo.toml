@@ -1,6 +1,6 @@
 [package]
 name = "majik-key"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 license = "Apache-2.0"
 description = "A post-quantum ready seed phrase account library for the Majikah ecosystem. Manages deterministic X25519 and ML-KEM-768 identities with Argon2id protection."
