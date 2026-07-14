@@ -104,8 +104,9 @@ pub fn derive_bitcoin_keypair_from_seed(
             MAJIK_BITCOIN_DOMAIN_PATH
         });
 
-    let path = DerivationPath::from_str(path_str)
-        .map_err(|_| MajikKeyError::Other(format!("Invalid Bitcoin derivation path: {path_str}")))?;
+    let path = DerivationPath::from_str(path_str).map_err(|_| {
+        MajikKeyError::Other(format!("Invalid Bitcoin derivation path: {path_str}"))
+    })?;
 
     let secp = Secp256k1::new();
 
@@ -134,9 +135,7 @@ pub fn derive_bitcoin_keypair_from_seed(
 /// Re-derive the compressed public key from a raw private key. Used when
 /// unlocking — we only encrypt/store the private key, so the public key is
 /// recomputed on unlock rather than stored redundantly encrypted.
-pub fn bitcoin_public_key_from_private_key(
-    private_key: &[u8; 32],
-) -> MajikKeyResult<[u8; 33]> {
+pub fn bitcoin_public_key_from_private_key(private_key: &[u8; 32]) -> MajikKeyResult<[u8; 33]> {
     let secp = Secp256k1::new();
     let secret_key = SecretKey::from_slice(private_key)
         .map_err(|_| MajikKeyError::Other("Invalid secp256k1 private key".into()))?;

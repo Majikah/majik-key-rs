@@ -5,7 +5,6 @@
 use majik_key::majik_key::{MajikKey, MajikKeyCreateOptions};
 use zeroize::Zeroizing;
 
-
 #[test]
 #[ignore]
 fn create_and_basic_metadata() {

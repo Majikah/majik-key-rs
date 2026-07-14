@@ -1,10 +1,9 @@
 //! Cross-compatibility fixture and test.
 //! Run with `cargo test cross_compat_dump -- --nocapture` to view the Base64 output.
 //! The `cross_compat_assertions` test guarantees strict parity with the TS repo.
-
+use base64::prelude::*; // Make sure `base64` is in your Cargo.toml
 use majik_key::crypto::encryption_engine::derive_identity_from_mnemonic;
 use majik_key::crypto::wordlist::MnemonicLanguage;
-use base64::prelude::*; // Make sure `base64` is in your Cargo.toml
 
 /// # ⚠️ SECURITY WARNING: FOR TESTING ONLY
 ///
@@ -15,10 +14,6 @@ use base64::prelude::*; // Make sure `base64` is in your Cargo.toml
 /// If you find this mnemonic being used in production code, immediate action is
 /// required to rotate keys and secure any affected assets. You have been warned:
 /// this is strictly for local development and integration testing.
-#[deprecated(
-    since = "0.1.0", 
-    note = "CRITICAL SECURITY RISK: Do not use this testing mnemonic in production."
-)]
 const FIXED_TEST_MNEMONIC: &str =
     "wing ride lawsuit satisfy buddy depart budget sight shaft else margin wait";
 
@@ -29,12 +24,30 @@ fn cross_compat_dump() {
         .expect("derivation should succeed for a valid test mnemonic");
 
     println!("=== Rust derivation output (Base64) ===");
-    println!("x25519_public:     {}", BASE64_STANDARD.encode(identity.public_key));
-    println!("x25519_private:    {}", BASE64_STANDARD.encode(identity.private_key));
-    println!("fingerprint:       {}", BASE64_STANDARD.encode(identity.fingerprint));
-    println!("ml_kem_public:     {}", BASE64_STANDARD.encode(&identity.ml_kem_public_key));
-    println!("ed25519_public:    {}", BASE64_STANDARD.encode(identity.ed_public_key));
-    println!("ml_dsa_public:     {}", BASE64_STANDARD.encode(&identity.ml_dsa_public_key));
+    println!(
+        "x25519_public:     {}",
+        BASE64_STANDARD.encode(identity.public_key)
+    );
+    println!(
+        "x25519_private:    {}",
+        BASE64_STANDARD.encode(identity.private_key)
+    );
+    println!(
+        "fingerprint:       {}",
+        BASE64_STANDARD.encode(identity.fingerprint)
+    );
+    println!(
+        "ml_kem_public:     {}",
+        BASE64_STANDARD.encode(&identity.ml_kem_public_key)
+    );
+    println!(
+        "ed25519_public:    {}",
+        BASE64_STANDARD.encode(identity.ed_public_key)
+    );
+    println!(
+        "ml_dsa_public:     {}",
+        BASE64_STANDARD.encode(&identity.ml_dsa_public_key)
+    );
     println!("=======================================");
 }
 

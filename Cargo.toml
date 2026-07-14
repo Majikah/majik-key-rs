@@ -8,6 +8,7 @@ repository = "https://github.com/Majikah/majik-key-rs"
 keywords = ["bip39", "mnemonic", "cryptography", "post-quantum", "ed25519"]
 categories = ["cryptography", "authentication"]
 readme = "README.md"
+homepage = "https://majikah.solutions"
 
 [lib]
 name = "majik_key"       # crate names use underscores even if package uses hyphens
