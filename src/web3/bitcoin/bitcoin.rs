@@ -56,7 +56,7 @@ pub struct BitcoinDerivationOptions {
 /// itself is never stored, only the resulting key, encrypted at rest like
 /// the other four keypairs.
 pub fn derive_bitcoin_keypair_from_seed(
-    seed: &[u8],
+    seed: &Zeroizing<[u8; 64]>,
     options: Option<&BitcoinDerivationOptions>,
 ) -> MajikKeyResult<BitcoinKeypairMaterial> {
     let standard = options.map(|o| o.standard).unwrap_or(false);
@@ -77,7 +77,7 @@ pub fn derive_bitcoin_keypair_from_seed(
     // NetworkKind only affects xprv/xpub version-byte serialization, not
     // the key material itself, so it's irrelevant to the derived scalar —
     // Main is fine even though we never serialize to base58 xprv here.
-    let master = Xpriv::new_master(NetworkKind::Main, seed)
+    let master = Xpriv::new_master(NetworkKind::Main, seed.as_ref())
         .map_err(|e| MajikKeyError::Other(format!("Failed to derive Bitcoin master key: {e}")))?;
 
     let child = master

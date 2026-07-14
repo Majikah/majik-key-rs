@@ -149,26 +149,15 @@ pub fn sign_with_solana_material(
     material: &SolanaKeypairMaterial,
     message: &[u8],
 ) -> MajikKeyResult<[u8; 64]> {
-    let seed: [u8; 32] = material.secret_key[..ED25519_SEED_LENGTH]
-        .try_into()
-        .map_err(|_| MajikKeyError::Other("Malformed Solana secret key".into()))?;
+    let mut seed = Zeroizing::new([0u8; 32]);
+    seed.copy_from_slice(&material.secret_key[..ED25519_SEED_LENGTH]);
     let signing_key = SigningKey::from_bytes(&seed);
     Ok(signing_key.sign(message).to_bytes())
 }
 
 // ─── Solana SDK integration — NOT ported ────────────────────────────────────
-//
-// The TS lib lazily `import()`s `@solana/kit` to hand back a real
-// `KeyPairSigner` / on-chain `Address`. There is no equivalent lazy-load
-// mechanism in Rust, and no `solana-sdk`/`solana-client` dependency is
-// currently part of this crate's Cargo.toml. Rather than guess which
-// Solana Rust SDK (and which version — the ecosystem has churned a lot
-// here, similarly to the `@noble/curves` v2 situation) you actually want
-// wired into the Cloudflare Workers build, these are left as explicit
-// stubs — same pattern as `MajikKey::to_contact()` /
-// `to_majik_message_identity()` in `majik_key.rs`.
 
-/// TODO: needs a Solana Rust SDK dependency, not yet chosen/ported.
+
 pub fn get_solana_keypair(_material: &SolanaKeypairMaterial) -> MajikKeyResult<()> {
     Err(MajikKeyError::Other(
         "get_solana_keypair() requires a Solana Rust SDK dependency, not yet ported".into(),

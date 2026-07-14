@@ -31,9 +31,6 @@ use crate::web3::solana::solana::{
 #[derive(Debug, Clone, Copy)]
 pub struct MajikKeyCreateOptions {
     pub mnemonic_language: MnemonicLanguage,
-    /// @experimental — currently always ignored. Bitcoin derivation isn't
-    /// wired up yet (see the `web3` stub methods below); this flag exists
-    /// now so callers won't need to change their call sites once it is.
     pub derive_bitcoin: bool,
 }
 
@@ -240,7 +237,7 @@ impl MajikKey {
             let bip39_lang = options.mnemonic_language.to_bip39()?;
             let parsed = Mnemonic::parse_in_normalized(bip39_lang, &mnemonic)
                 .map_err(|_| MajikKeyError::InvalidMnemonic)?;
-            let seed = parsed.to_seed("");
+            let seed = Zeroizing::new(parsed.to_seed(""));
             let btc_material = derive_bitcoin_keypair_from_seed(&seed, None)?;
             let encrypted_btc =
                 Self::encrypt_with_argon2(&*btc_material.private_key, &passphrase, &salt)?;
@@ -932,7 +929,7 @@ impl MajikKey {
         let bip39_lang = mnemonic_language.to_bip39()?;
         let parsed = Mnemonic::parse_in_normalized(bip39_lang, mnemonic)
             .map_err(|_| MajikKeyError::InvalidMnemonic)?;
-        let seed = parsed.to_seed("");
+        let seed = Zeroizing::new(parsed.to_seed(""));
 
         let options = BitcoinDerivationOptions {
             standard: true,

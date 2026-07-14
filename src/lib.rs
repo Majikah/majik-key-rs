@@ -1,6 +1,6 @@
 //! majik_key
 //! ---
-//! Post-quantum ready seed phrase account library for the Majikah ecosystem.
+//! A post-quantum ready seed phrase account library for the Majikah ecosystem. Manages deterministic X25519 and ML-KEM-768 identities with Argon2id protection..
 
 pub mod crypto;
 pub mod error;
