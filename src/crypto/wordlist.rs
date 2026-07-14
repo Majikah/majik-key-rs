@@ -5,9 +5,10 @@ use bip39::Language;
 /// there's no lazy `import()` per language here — `bip39`'s wordlists are
 /// compiled in as static tables, so there's no async loader step at all;
 /// this becomes a simple, synchronous enum-to-`bip39::Language` mapping.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MnemonicLanguage {
+    #[default]
     En,
     Fr,
     Es,
@@ -20,12 +21,6 @@ pub enum MnemonicLanguage {
     ZhCn,
     #[serde(rename = "zh-tw")]
     ZhTw,
-}
-
-impl Default for MnemonicLanguage {
-    fn default() -> Self {
-        MnemonicLanguage::En
-    }
 }
 
 impl MnemonicLanguage {

@@ -45,7 +45,7 @@ pub fn derive_identity_from_mnemonic(
     // `&*seed32` explicitly dereferences through Zeroizing to the inner
     // `[u8;32]` first, giving exactly the type the function wants with no
     // coercion required at all.
-    let ed_signing_key = EdSigningKey::from_bytes(&*seed32);
+    let ed_signing_key = EdSigningKey::from_bytes(&seed32);
     let ed_verifying_key = ed_signing_key.verifying_key();
     let ed_public_key: [u8; 32] = ed_verifying_key.to_bytes();
 
@@ -53,7 +53,7 @@ pub fn derive_identity_from_mnemonic(
     ed_secret_key[0..32].copy_from_slice(&seed32[..]); // slice target here — explicit [..]
     ed_secret_key[32..64].copy_from_slice(&ed_public_key);
 
-    let x25519_private = ed25519_seed_to_x25519_secret(&*seed32); // fixed-array target — &*
+    let x25519_private = ed25519_seed_to_x25519_secret(&seed32);
     let x25519_public = ed25519_public_to_x25519(&ed_public_key)?; // plain array already, fine
     let fingerprint = sha256_bytes(&x25519_public); // array->slice unsizing only, no custom Deref, fine as-is
 
@@ -73,7 +73,7 @@ pub fn derive_identity_from_mnemonic(
     dsa_seed_input.extend_from_slice(MAJIK_SIGNATURE_SEED.as_bytes());
     let ml_dsa_secret_seed = Zeroizing::new(sha256_bytes(&dsa_seed_input[..])); // slice target — explicit [..]
 
-    let (ml_dsa_pk, ml_dsa_sk) = ml_dsa_87::KG::keygen_from_seed(&*ml_dsa_secret_seed); // fixed-array target — &*
+    let (ml_dsa_pk, ml_dsa_sk) = ml_dsa_87::KG::keygen_from_seed(&ml_dsa_secret_seed);
     let ml_dsa_public_key = ml_dsa_pk.into_bytes().to_vec();
     drop(ml_dsa_sk);
 

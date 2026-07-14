@@ -440,10 +440,8 @@ impl MajikKey {
         let btc_plain: Option<Zeroizing<Vec<u8>>> =
             if let Some(enc) = self.encrypted_btc_secret_key.as_ref() {
                 Self::decrypt_with_argon2(enc, current_passphrase, &old_salt)
-            } else if let Some(btc) = self.btc_secret_key.as_ref() {
-                Some((*btc).clone())
             } else {
-                None
+                self.btc_secret_key.as_ref().map(|btc| (*btc).clone())
             };
 
         let new_salt = generate_random_bytes(SALT_SIZE);
@@ -655,11 +653,14 @@ impl MajikKey {
 
         Ok(MajikKeyDangerousJson {
             base: self.to_json(),
-            private_key_base64: B64.encode(&**private_key),
-            ml_kem_secret_key_base64: B64.encode(&**ml_kem),
-            ed_secret_key_base64: B64.encode(&**ed),
-            ml_dsa_secret_key_base64: B64.encode(&**ml_dsa),
-            btc_secret_key_base64: self.btc_secret_key.as_ref().map(|v| B64.encode(&**v)),
+            private_key_base64: B64.encode(**private_key),
+            ml_kem_secret_key_base64: B64.encode(**ml_kem),
+            ed_secret_key_base64: B64.encode(**ed),
+            ml_dsa_secret_key_base64: B64.encode(**ml_dsa),
+            btc_secret_key_base64: self
+                .btc_secret_key
+                .as_ref()
+                .map(|v| B64.encode(v.as_slice())),
         })
     }
 
@@ -732,7 +733,6 @@ impl MajikKey {
         Ok(MnemonicJson {
             id: self.backup.clone(),
             seed: mnemonic
-                .trim()
                 .split_whitespace()
                 .map(|w| w.to_lowercase())
                 .collect(),
@@ -854,7 +854,7 @@ impl MajikKey {
         let _ = self.private_key.as_ref().ok_or(MajikKeyError::Locked)?;
         Ok(SerializedIdentity {
             id: self.id.clone(),
-            public_key: B64.encode(&self.public_key),
+            public_key: B64.encode(self.public_key),
             fingerprint: self.fingerprint.clone(),
             encrypted_private_key: B64.encode(&self.encrypted_private_key),
             salt: B64.encode(&self.salt),
@@ -968,12 +968,12 @@ impl MajikKey {
     // Add this to your PRIVATE HELPERS section
     fn safe_b64_decode(input: &str) -> MajikKeyResult<Zeroizing<Vec<u8>>> {
         // Calculate max possible length to pre-allocate
-        let max_len = (input.len() + 3) / 4 * 3;
+        let max_len = input.len().div_ceil(4) * 3;
         let mut buffer = Zeroizing::new(vec![0u8; max_len]);
 
         // Decode directly into the protected heap allocation
         let actual_len = B64
-            .decode_slice(input, &mut *buffer)
+            .decode_slice(input, &mut buffer)
             .map_err(|_| MajikKeyError::Other("Safe Base64 decode failed".into()))?;
 
         buffer.truncate(actual_len);
@@ -983,7 +983,7 @@ impl MajikKey {
     fn encrypt_with_argon2(plain: &[u8], passphrase: &str, salt: &[u8]) -> MajikKeyResult<Vec<u8>> {
         let key = derive_key_from_passphrase_argon2(passphrase, salt)?;
         let iv = generate_random_bytes(IV_LENGTH);
-        let ciphertext = aes_gcm_encrypt(&*key, &iv, plain)?; // &*key, was &key
+        let ciphertext = aes_gcm_encrypt(&key, &iv, plain)?;
         let mut blob = iv;
         blob.extend_from_slice(&ciphertext);
         Ok(blob)
@@ -999,7 +999,7 @@ impl MajikKey {
         }
         let key = derive_key_from_passphrase_argon2(passphrase, salt).ok()?;
         let (iv, ciphertext) = blob.split_at(IV_LENGTH);
-        aes_gcm_decrypt(&*key, iv, ciphertext) // &*key, and NO .map(Zeroizing::new) — already wrapped
+        aes_gcm_decrypt(&key, iv, ciphertext)
     }
 
     fn decrypt_private_key(
@@ -1017,8 +1017,7 @@ impl MajikKey {
             KdfVersion::Argon2id => derive_key_from_passphrase_argon2(passphrase, salt)?,
             KdfVersion::Pbkdf2 => derive_key_from_passphrase_pbkdf2(passphrase, salt, 250_000),
         };
-        aes_gcm_decrypt(&*key, iv, ciphertext) // &*key, no .map(Zeroizing::new) — already wrapped
-            .ok_or(MajikKeyError::DecryptionFailed)
+        aes_gcm_decrypt(&key, iv, ciphertext).ok_or(MajikKeyError::DecryptionFailed)
     }
 
     /// Encrypts every secret in `identity` under one freshly generated
@@ -1066,7 +1065,7 @@ impl MajikKey {
         let mnemonic_salt = MAJIK_MNEMONIC_SALT.as_bytes();
         let key = derive_key_from_mnemonic_argon2(mnemonic, mnemonic_salt)?;
         let iv = generate_random_bytes(IV_LENGTH);
-        let ciphertext = aes_gcm_encrypt(&*key, &iv, &identity.private_key[..])?; // both fixed
+        let ciphertext = aes_gcm_encrypt(&key, &iv, &identity.private_key[..])?;
 
         let blob = BackupBlob {
             id: B64.encode(identity.fingerprint),
@@ -1087,7 +1086,7 @@ impl MajikKey {
 
         let plain = if parsed.backup_kdf_version == KdfVersion::Argon2id as u8 {
             let key = derive_key_from_mnemonic_argon2(mnemonic, mnemonic_salt)?;
-            aes_gcm_decrypt(&*key, &iv, &ciphertext) // &*key
+            aes_gcm_decrypt(&key, &iv, &ciphertext)
         } else {
             None
         };

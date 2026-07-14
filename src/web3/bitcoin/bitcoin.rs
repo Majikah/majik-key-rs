@@ -1,49 +1,13 @@
-//! web3/bitcoin.rs
+//! Experimental Bitcoin keypair utilities for MajikKey.
 //!
-//! ⚠️ EXPERIMENTAL — Bitcoin keypair utilities for MajikKey (Rust port of
-//! the TS lib's `core/web3/bitcoin.ts`).
+//! This is a Rust port of the TypeScript implementation in the web3 Bitcoin
+//! module. The current version uses the existing `bitcoin` crate dependency, so
+//! no new Cargo entries are required. It derives BIP-32/BIP-84 key material
+//! directly from the raw BIP-39 seed and exposes the resulting secret key in a
+//! zeroizing wrapper.
 //!
-//! REVISION NOTE: an earlier draft of this file assumed standalone `bip32`
-//! + `secp256k1` + `bech32` + `ripemd` crate dependencies. Checked against
-//! your actual `Cargo.toml`, that was wrong — you already depend on the
-//! *full* `bitcoin` crate (0.32) behind the `bitcoin` feature, which pulls
-//! in BIP-32 (`bitcoin::bip32`), secp256k1 (`bitcoin::secp256k1`,
-//! re-exported), WIF (`bitcoin::PrivateKey`), and bech32 SegWit addresses
-//! (`bitcoin::Address`) all as one dependency. This version uses only
-//! that — no new Cargo.toml entries needed.
-//!
-//! Design (unchanged from TS):
-//!   - Real BIP-32/BIP-84 HD derivation directly off the raw 64-byte BIP-39
-//!     seed — NOT a hash-based domain separation like Solana:
-//!
-//!       MAJIK_BITCOIN_DOMAIN_PATH   (default) — effectively private to Majik.
-//!       MAJIK_BITCOIN_STANDARD_PATH (opt-in)  — the REAL BIP-84 mainnet path;
-//!         recoverable in any standard wallet using nothing but the mnemonic.
-//!
-//!   - `private_key` is the raw 32-byte secp256k1 scalar, `Zeroizing`-wrapped.
-//!   - WIF and native SegWit (bech32) address both come straight from
-//!     `bitcoin::PrivateKey` / `bitcoin::CompressedPublicKey` /
-//!     `bitcoin::Address` — no hand-rolled base58check or bech32 needed
-//!     (unlike the TS version, which hand-rolls WIF because
-//!     `@scure/btc-signer` is only lazily loaded for addresses).
-//!
-//! This module lives behind your crate's `bitcoin` feature
-//! (`bitcoin = ["dep:bitcoin"]`) — gate `pub mod bitcoin;` in `web3/mod.rs`
-//! with `#[cfg(feature = "bitcoin")]`.
-//!
-//! ⚠️ VERIFY BEFORE PRODUCTION — same category of risk you already flagged
-//! for `@noble/curves` v2 Schnorr signing:
-//!   1. `Secp256k1::sign_schnorr(...)` — confirm this exact method exists
-//!      on whatever `secp256k1` version `bitcoin` 0.32.x pulls in
-//!      transitively (currently `^0.29` per its own manifest); Schnorr
-//!      signing may additionally require the `rand`/`global-context`
-//!      feature to be enabled on `secp256k1` itself, which `bitcoin`'s
-//!      default features may or may not turn on for you.
-//!   2. `Address::p2wpkh(&CompressedPublicKey, network)` — confirm the
-//!      second parameter type against 0.32.x; it has been `Network` in
-//!      some point releases and `impl Into<KnownHrp>` in others.
-//!   Run both against BIP-340 test vectors and a known-good testnet
-//!   address before trusting this for real funds.
+//! The implementation is intentionally conservative. Verify it against known
+//! test vectors before using it with real funds.
 
 use std::str::FromStr;
 

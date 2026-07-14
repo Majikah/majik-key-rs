@@ -71,16 +71,9 @@ pub struct SolanaKeypairMaterial {
 
 /// Options accepted by `MajikKey::get_solana_keypair_material()`.
 /// Mirrors the TS lib's `{ reuseMessageKey?: boolean }` shape.
+#[derive(Debug, Clone, Default)]
 pub struct SolanaDerivationOptions {
     pub reuse_message_key: bool,
-}
-
-impl Default for SolanaDerivationOptions {
-    fn default() -> Self {
-        Self {
-            reuse_message_key: false,
-        }
-    }
 }
 
 // ─── Derivation ─────────────────────────────────────────────────────────────

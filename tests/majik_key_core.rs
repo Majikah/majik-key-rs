@@ -6,7 +6,6 @@ use majik_key::majik_key::{MajikKey, MajikKeyCreateOptions};
 use zeroize::Zeroizing;
 
 #[test]
-#[ignore]
 fn create_and_basic_metadata() {
     let mnemonic =
         MajikKey::generate_mnemonic(128, majik_key::crypto::wordlist::MnemonicLanguage::En)
@@ -32,7 +31,6 @@ fn create_and_basic_metadata() {
 }
 
 #[test]
-#[ignore]
 fn lock_unlock_roundtrip() {
     let mnemonic =
         MajikKey::generate_mnemonic(128, majik_key::crypto::wordlist::MnemonicLanguage::En)
@@ -55,7 +53,6 @@ fn lock_unlock_roundtrip() {
 }
 
 #[test]
-#[ignore]
 fn json_roundtrip_and_unlock() {
     let mnemonic =
         MajikKey::generate_mnemonic(128, majik_key::crypto::wordlist::MnemonicLanguage::En)
@@ -83,7 +80,6 @@ fn json_roundtrip_and_unlock() {
 }
 
 #[test]
-#[ignore]
 fn dangerous_json_roundtrip() {
     let mnemonic =
         MajikKey::generate_mnemonic(128, majik_key::crypto::wordlist::MnemonicLanguage::En)
@@ -109,7 +105,6 @@ fn dangerous_json_roundtrip() {
 }
 
 #[test]
-#[ignore]
 fn update_passphrase_rotates_blobs() {
     let mnemonic =
         MajikKey::generate_mnemonic(128, majik_key::crypto::wordlist::MnemonicLanguage::En)
