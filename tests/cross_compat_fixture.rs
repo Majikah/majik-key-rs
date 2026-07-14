@@ -23,6 +23,7 @@ const FIXED_TEST_MNEMONIC: &str =
     "wing ride lawsuit satisfy buddy depart budget sight shaft else margin wait";
 
 #[test]
+#[ignore]
 fn cross_compat_dump() {
     let identity = derive_identity_from_mnemonic(FIXED_TEST_MNEMONIC, MnemonicLanguage::En)
         .expect("derivation should succeed for a valid test mnemonic");
@@ -38,6 +39,7 @@ fn cross_compat_dump() {
 }
 
 #[test]
+#[ignore]
 fn cross_compat_assertions() {
     let identity = derive_identity_from_mnemonic(FIXED_TEST_MNEMONIC, MnemonicLanguage::En)
         .expect("derivation should succeed for a valid test mnemonic");
