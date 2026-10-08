@@ -178,7 +178,7 @@ pub fn known_key_ids(family: Option<KeyFamily>) -> Vec<KeyId> {
     KeyId::ALL
         .iter()
         .copied()
-        .filter(|id| family.map_or(true, |f| key_family_of(*id) == f))
+        .filter(|id| family.is_none_or(|f| key_family_of(*id) == f))
         .collect()
 }
 

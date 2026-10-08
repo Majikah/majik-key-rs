@@ -97,12 +97,7 @@ fn falcon_is_declared_unimplemented_but_known() {
 
 #[test]
 fn registry_order_and_ids_match_ts() {
-    let ts_ids: Vec<&str> = v()["ids"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|x| s(x))
-        .collect();
+    let ts_ids: Vec<&str> = v()["ids"].as_array().unwrap().iter().map(s).collect();
     let rs: Vec<String> = enableable_key_ids()
         .iter()
         .filter(|i| algorithm(**i).kind == KeyKind::Stored)

@@ -44,9 +44,7 @@ pub fn to_safe_file_name(value: &str) -> String {
         })
         .collect();
     let collapsed = replaced.split_whitespace().collect::<Vec<_>>().join(" ");
-    collapsed
-        .trim_end_matches(|c| c == '.' || c == ' ')
-        .to_string()
+    collapsed.trim_end_matches(['.', ' ']).to_string()
 }
 
 /// Static body of the backup README — update copy here, every zip picks it up.

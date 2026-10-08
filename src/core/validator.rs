@@ -77,10 +77,10 @@ impl MajikKeyValidator {
             .as_object()
             .ok_or_else(|| MajikKeyError::msg("Invalid JSON: must be an object"))?;
         for f in ["id", "fingerprint", "salt", "backup", "timestamp"] {
-            if !obj
+            if obj
                 .get(f)
                 .and_then(Value::as_str)
-                .is_some_and(|s| !s.is_empty())
+                .is_none_or(|s| s.is_empty())
             {
                 return Err(MajikKeyError::msg(format!(
                     "Invalid JSON: missing or invalid '{f}' field"
