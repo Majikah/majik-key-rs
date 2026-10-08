@@ -1,6 +1,7 @@
 # Majik Key
 
 [![Crates.io](https://img.shields.io/crates/v/majik-key.svg)](https://crates.io/crates/majik-key) [![Documentation](https://docs.rs/majik-key/badge.svg)](https://docs.rs/majik-key) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 [![Zenodo](https://img.shields.io/badge/Technical%20Whitepaper-Zenodo-1682D4?style=for-the-badge&logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.23208491) [![Majikah](https://img.shields.io/badge/Majikah-Read%20the%20Article-EA7F05?style=for-the-badge)](https://majikah.solutions/articles/majik-key-whitepaper)
 
 [![Developed by Zelijah](https://img.shields.io/badge/Developed%20by-Zelijah-red?logo=github&logoColor=white)](https://www.thezelijah.world)
