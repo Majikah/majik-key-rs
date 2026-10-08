@@ -30,9 +30,15 @@ fn bip39_seed_and_validation_all_ten_languages() {
     for m in v()["mnemonics"].as_array().unwrap() {
         let l = lang(&m["language"]);
         seen.insert(l);
-        validate_mnemonic_in(s(&m["phrase"]), l).unwrap_or_else(|_| panic!("{} invalid", s(&m["name"])));
+        validate_mnemonic_in(s(&m["phrase"]), l)
+            .unwrap_or_else(|_| panic!("{} invalid", s(&m["name"])));
         let seed = mnemonic_to_seed(s(&m["phrase"]), l).unwrap();
-        assert_eq!(hex::encode(&seed[..]), s(&m["seedHex"]), "seed mismatch for {}", s(&m["name"]));
+        assert_eq!(
+            hex::encode(&seed[..]),
+            s(&m["seedHex"]),
+            "seed mismatch for {}",
+            s(&m["name"])
+        );
     }
     assert_eq!(seen.len(), 10, "all ten languages covered");
     // wrong language must be rejected
@@ -48,16 +54,34 @@ fn every_key_matches_ts_byte_for_byte() {
         for (id, kp) in m["keys"].as_object().unwrap() {
             let kid: KeyId = id.parse().unwrap();
             if FALCON.contains(&id.as_str()) {
-                assert!(derive_key(kid, &seed).is_err(), "falcon must refuse to derive");
+                assert!(
+                    derive_key(kid, &seed).is_err(),
+                    "falcon must refuse to derive"
+                );
                 continue;
             }
             let d = derive_key(kid, &seed).unwrap();
-            assert_eq!(d.public_key, b64(&kp["pub"]), "{} pub ({})", id, s(&m["name"]));
-            assert_eq!(&d.secret_key[..], &b64(&kp["sec"])[..], "{} sec ({})", id, s(&m["name"]));
+            assert_eq!(
+                d.public_key,
+                b64(&kp["pub"]),
+                "{} pub ({})",
+                id,
+                s(&m["name"])
+            );
+            assert_eq!(
+                &d.secret_key[..],
+                &b64(&kp["sec"])[..],
+                "{} sec ({})",
+                id,
+                s(&m["name"])
+            );
             checked += 1;
         }
         let x = derive_key(KeyId::X25519, &seed).unwrap();
-        assert_eq!(fingerprint_from_public_raw(&x.public_key), s(&m["fingerprint"]));
+        assert_eq!(
+            fingerprint_from_public_raw(&x.public_key),
+            s(&m["fingerprint"])
+        );
     }
     assert!(checked > 80, "checked {checked}");
 }
@@ -73,13 +97,28 @@ fn falcon_is_declared_unimplemented_but_known() {
 
 #[test]
 fn registry_order_and_ids_match_ts() {
-    let ts_ids: Vec<&str> = v()["ids"].as_array().unwrap().iter().map(|x| s(x)).collect();
-    let rs: Vec<String> = enableable_key_ids().iter().filter(|i| algorithm(**i).kind == KeyKind::Stored).map(|i| i.to_string()).collect();
+    let ts_ids: Vec<&str> = v()["ids"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| s(x))
+        .collect();
+    let rs: Vec<String> = enableable_key_ids()
+        .iter()
+        .filter(|i| algorithm(**i).kind == KeyKind::Stored)
+        .map(|i| i.to_string())
+        .collect();
     // TS also lists the two Falcon ids as enableable; Rust deliberately doesn't.
-    let ts_wo_falcon: Vec<&str> = ts_ids.iter().copied().filter(|i| !FALCON.contains(i)).collect();
+    let ts_wo_falcon: Vec<&str> = ts_ids
+        .iter()
+        .copied()
+        .filter(|i| !FALCON.contains(i))
+        .collect();
     assert_eq!(rs, ts_wo_falcon);
     assert_eq!(KeyId::ALL.len(), 31);
-    for id in KeyId::ALL { assert_eq!(KeyId::parse(id.as_str()), Some(*id)); }
+    for id in KeyId::ALL {
+        assert_eq!(KeyId::parse(id.as_str()), Some(*id));
+    }
 }
 
 #[test]
@@ -96,10 +135,19 @@ fn hkdf_vectors() {
 fn kdf_vectors() {
     let k = &v()["kdf"];
     let salt = b64(&k["saltB64"]);
-    assert_eq!(&derive_key_from_passphrase_argon2(s(&k["passphrase"]), &salt).unwrap()[..], &b64(&k["argonPassphraseKey"])[..]);
-    assert_eq!(&derive_key_from_passphrase(s(&k["passphrase"]), &salt)[..], &b64(&k["pbkdf2Key"])[..]);
+    assert_eq!(
+        &derive_key_from_passphrase_argon2(s(&k["passphrase"]), &salt).unwrap()[..],
+        &b64(&k["argonPassphraseKey"])[..]
+    );
+    assert_eq!(
+        &derive_key_from_passphrase(s(&k["passphrase"]), &salt)[..],
+        &b64(&k["pbkdf2Key"])[..]
+    );
     let mn = s(&v()["mnemonics"][0]["phrase"]);
-    assert_eq!(&derive_key_from_mnemonic_argon2(mn, MAJIK_MNEMONIC_SALT.as_bytes()).unwrap()[..], &b64(&k["argonMnemonicKey"])[..]);
+    assert_eq!(
+        &derive_key_from_mnemonic_argon2(mn, MAJIK_MNEMONIC_SALT.as_bytes()).unwrap()[..],
+        &b64(&k["argonMnemonicKey"])[..]
+    );
 }
 
 #[test]
@@ -108,15 +156,28 @@ fn imports_every_ts_backup_generation() {
     let fp = s(&v()["backups"]["fingerprint"]);
     for name in ["v2Argon", "v1Argon", "v1ArgonExplicit", "pbkdf2"] {
         let backup = s(&v()["backups"][name]);
-        let k = MajikKey::import_from_mnemonic_backup(backup, mn, "pw-123", Some("imp"), &Default::default())
-            .unwrap_or_else(|e| panic!("{name}: {e}"));
+        let k = MajikKey::import_from_mnemonic_backup(
+            backup,
+            mn,
+            "pw-123",
+            Some("imp"),
+            &Default::default(),
+        )
+        .unwrap_or_else(|e| panic!("{name}: {e}"));
         assert_eq!(k.fingerprint(), fp, "{name}");
         assert!(k.is_unlocked() && k.is_core_complete());
         assert_eq!(k.backup(), backup);
     }
     // wrong mnemonic is rejected before the expensive derivation
     let wrong = "legal winner thank year wave sausage worth useful legal winner thank yellow";
-    assert!(MajikKey::import_from_mnemonic_backup(s(&v()["backups"]["v2Argon"]), wrong, "pw-123", None, &Default::default()).is_err());
+    assert!(MajikKey::import_from_mnemonic_backup(
+        s(&v()["backups"]["v2Argon"]),
+        wrong,
+        "pw-123",
+        None,
+        &Default::default()
+    )
+    .is_err());
 }
 
 #[test]
@@ -125,7 +186,10 @@ fn loads_ts_registry_account_and_roundtrips_json_exactly() {
     let mut k = MajikKey::from_json_str(&acct["json"].to_string()).unwrap();
     assert!(k.is_locked() && k.is_argon2id());
     assert!(!k.verify("wrong passphrase") && k.verify(s(&acct["passphrase"])));
-    assert!(k.unlock("wrong passphrase").is_err() && k.is_locked(), "failed unlock leaves account locked");
+    assert!(
+        k.unlock("wrong passphrase").is_err() && k.is_locked(),
+        "failed unlock leaves account locked"
+    );
     k.unlock(s(&acct["passphrase"])).unwrap();
 
     // every secret the TS side sealed decrypts to exactly the same bytes
@@ -134,9 +198,14 @@ fn loads_ts_registry_account_and_roundtrips_json_exactly() {
         assert_eq!(&got[..], &b64(sec)[..], "{id}");
     }
     // serialization is lossless against TS output (compared as JSON values)
-    assert_eq!(serde_json::to_value(k.to_json()).unwrap(), acct["json"], "to_json != TS toJSON");
+    assert_eq!(
+        serde_json::to_value(k.to_json()).unwrap(),
+        acct["json"],
+        "to_json != TS toJSON"
+    );
     // registry-only output drops the flat fields
-    let slim = serde_json::to_value(k.to_json_with(&MajikKeyToJsonOptions { legacy: false })).unwrap();
+    let slim =
+        serde_json::to_value(k.to_json_with(&MajikKeyToJsonOptions { legacy: false })).unwrap();
     assert!(slim.get("encryptedMlKemSecretKey").is_none() && slim.get("keys").is_some());
     assert!(MajikKey::from_json_str(&slim.to_string()).is_ok());
 }
@@ -155,17 +224,38 @@ fn passphrase_change_and_add_keys_on_ts_account() {
     let mut k2 = MajikKey::from_json(&k.to_json()).unwrap();
     k2.unlock("brand new passphrase").unwrap();
     for (id, sec) in acct["secrets"].as_object().unwrap() {
-        assert_eq!(&k2.get_private_key(id.parse().unwrap()).unwrap()[..], &b64(sec)[..], "{id}");
+        assert_eq!(
+            &k2.get_private_key(id.parse().unwrap()).unwrap()[..],
+            &b64(sec)[..],
+            "{id}"
+        );
     }
 
     // add_keys: wrong mnemonic refused, right one adds and matches the TS derivation
     let wrong = "legal winner thank year wave sausage worth useful legal winner thank yellow";
-    assert!(k2.add_keys(&[KeyId::MlKem512], wrong, "brand new passphrase").is_err());
-    assert!(k2.add_keys(&[KeyId::MlKem512], s(&acct["mnemonic"]), "not the passphrase").is_err());
-    let added = k2.add_keys(&[KeyId::MlKem512, KeyId::Eth], s(&acct["mnemonic"]), "brand new passphrase").unwrap();
+    assert!(k2
+        .add_keys(&[KeyId::MlKem512], wrong, "brand new passphrase")
+        .is_err());
+    assert!(k2
+        .add_keys(
+            &[KeyId::MlKem512],
+            s(&acct["mnemonic"]),
+            "not the passphrase"
+        )
+        .is_err());
+    let added = k2
+        .add_keys(
+            &[KeyId::MlKem512, KeyId::Eth],
+            s(&acct["mnemonic"]),
+            "brand new passphrase",
+        )
+        .unwrap();
     assert_eq!(added, vec![KeyId::MlKem512], "Eth was already present");
     let ts = &v()["mnemonics"][0]["keys"]["pq:ml-kem-512"];
-    assert_eq!(&k2.get_private_key(KeyId::MlKem512).unwrap()[..], &b64(&ts["sec"])[..]);
+    assert_eq!(
+        &k2.get_private_key(KeyId::MlKem512).unwrap()[..],
+        &b64(&ts["sec"])[..]
+    );
     // and the new key survives a lock/unlock cycle under the new passphrase
     k2.lock();
     k2.unlock("brand new passphrase").unwrap();
@@ -180,16 +270,32 @@ fn loads_legacy_flat_account_with_mixed_kdf_and_migrates() {
     assert!(!k.is_fully_upgraded() || k.is_argon2id());
     k.unlock(s(&acct["passphrase"])).unwrap();
     for (id, sec) in acct["secrets"].as_object().unwrap() {
-        assert_eq!(&k.get_private_key(id.parse().unwrap()).unwrap()[..], &b64(sec)[..], "{id}");
+        assert_eq!(
+            &k.get_private_key(id.parse().unwrap()).unwrap()[..],
+            &b64(sec)[..],
+            "{id}"
+        );
     }
-    assert!(k.add_keys(&[KeyId::Eth], s(&v()["account"]["mnemonic"]), s(&acct["passphrase"])).is_err(), "legacy KDF must migrate first");
+    assert!(
+        k.add_keys(
+            &[KeyId::Eth],
+            s(&v()["account"]["mnemonic"]),
+            s(&acct["passphrase"])
+        )
+        .is_err(),
+        "legacy KDF must migrate first"
+    );
     k.lock();
     k.migrate(s(&acct["passphrase"])).unwrap();
     assert!(k.is_argon2id());
     let mut again = MajikKey::from_json(&k.to_json()).unwrap();
     again.unlock(s(&acct["passphrase"])).unwrap();
     for (id, sec) in acct["secrets"].as_object().unwrap() {
-        assert_eq!(&again.get_private_key(id.parse().unwrap()).unwrap()[..], &b64(sec)[..], "{id}");
+        assert_eq!(
+            &again.get_private_key(id.parse().unwrap()).unwrap()[..],
+            &b64(sec)[..],
+            "{id}"
+        );
     }
 }
 
@@ -199,35 +305,82 @@ fn web3_vectors() {
     let seed = hex::decode(s(&v()["mnemonics"][0]["seedHex"])).unwrap();
 
     // Bitcoin: standard + domain paths, WIF, bech32
-    let std = derive_bitcoin_keypair_from_seed(&seed, Some(&BitcoinDerivationOptions { standard: true, path: None })).unwrap();
+    let std = derive_bitcoin_keypair_from_seed(
+        &seed,
+        Some(&BitcoinDerivationOptions {
+            standard: true,
+            path: None,
+        }),
+    )
+    .unwrap();
     assert_eq!(&std.public_key[..], &b64(&w["btcStd"]["pub"])[..]);
     assert_eq!(&std.private_key[..], &b64(&w["btcStd"]["sec"])[..]);
     assert_eq!(to_wif(&std, None), s(&w["btcStd"]["wif"]));
     assert_eq!(to_wif(&std, Some(false)), s(&w["btcStd"]["wifU"]));
-    assert_eq!(to_bitcoin_address(&std).unwrap(), s(&w["btcStd"]["address"]));
-    assert_eq!(bitcoin_public_key_from_private_key(&std.private_key).unwrap(), std.public_key);
+    assert_eq!(
+        to_bitcoin_address(&std).unwrap(),
+        s(&w["btcStd"]["address"])
+    );
+    assert_eq!(
+        bitcoin_public_key_from_private_key(&std.private_key).unwrap(),
+        std.public_key
+    );
 
     let dom = derive_bitcoin_keypair_from_seed(&seed, None).unwrap();
     assert_eq!(&dom.public_key[..], &b64(&w["btcDom"]["pub"])[..]);
     assert_eq!(to_wif(&dom, None), s(&w["btcDom"]["wif"]));
-    assert_eq!(to_bitcoin_address(&dom).unwrap(), s(&w["btcDom"]["address"]));
+    assert_eq!(
+        to_bitcoin_address(&dom).unwrap(),
+        s(&w["btcDom"]["address"])
+    );
     let msg = hex::decode(s(&w["btcSchnorr"]["msgHex"])).unwrap();
-    assert_eq!(sign_with_bitcoin_material(&dom, &msg, BitcoinSignatureScheme::Ecdsa).unwrap(), b64(&w["btcEcdsa"]), "ECDSA must be RFC6979-identical");
-    let aux: [u8; 32] = hex::decode(s(&w["btcSchnorr"]["auxHex"])).unwrap().try_into().unwrap();
-    assert_eq!(sign_schnorr_with_aux(&dom, &msg, &aux).unwrap(), b64(&w["btcSchnorr"]["sig"]), "BIP-340 with fixed aux");
-    assert_eq!(sign_with_bitcoin_material(&dom, &msg, BitcoinSignatureScheme::Schnorr).unwrap().len(), 64);
+    assert_eq!(
+        sign_with_bitcoin_material(&dom, &msg, BitcoinSignatureScheme::Ecdsa).unwrap(),
+        b64(&w["btcEcdsa"]),
+        "ECDSA must be RFC6979-identical"
+    );
+    let aux: [u8; 32] = hex::decode(s(&w["btcSchnorr"]["auxHex"]))
+        .unwrap()
+        .try_into()
+        .unwrap();
+    assert_eq!(
+        sign_schnorr_with_aux(&dom, &msg, &aux).unwrap(),
+        b64(&w["btcSchnorr"]["sig"]),
+        "BIP-340 with fixed aux"
+    );
+    assert_eq!(
+        sign_with_bitcoin_material(&dom, &msg, BitcoinSignatureScheme::Schnorr)
+            .unwrap()
+            .len(),
+        64
+    );
 
     // Ethereum
     let derived = derive_key(KeyId::Eth, &seed).unwrap();
     let mut sk = Zeroizing::new([0u8; 32]);
     sk.copy_from_slice(&derived.secret_key);
-    let eth = EthereumKeypairMaterial { private_key: sk, public_key: derived.public_key.clone() };
-    assert_eq!(ethereum_address_from_public_key(&eth.public_key).unwrap(), s(&w["eth"]["address"]));
+    let eth = EthereumKeypairMaterial {
+        private_key: sk,
+        public_key: derived.public_key.clone(),
+    };
+    assert_eq!(
+        ethereum_address_from_public_key(&eth.public_key).unwrap(),
+        s(&w["eth"]["address"])
+    );
     let h = hex::decode(s(&w["ethSigHash"]["msgHex"])).unwrap();
     let sig = sign_ethereum_hash(&eth, &h).unwrap();
-    for f in ["r", "s", "serialized"] { assert_eq!(serde_json::to_value(&sig).unwrap()[f], w["ethSigHash"][f], "{f}"); }
+    for f in ["r", "s", "serialized"] {
+        assert_eq!(
+            serde_json::to_value(&sig).unwrap()[f],
+            w["ethSigHash"][f],
+            "{f}"
+        );
+    }
     assert_eq!(sig.v as u64, w["ethSigHash"]["v"].as_u64().unwrap());
-    assert_eq!(recover_ethereum_address(&h, &sig).unwrap(), s(&w["eth"]["address"]));
+    assert_eq!(
+        recover_ethereum_address(&h, &sig).unwrap(),
+        s(&w["eth"]["address"])
+    );
     let msig = sign_ethereum_message(&eth, s(&w["ethSigMsg"]["message"]).as_bytes()).unwrap();
     assert_eq!(msig.serialized, s(&w["ethSigMsg"]["serialized"]));
 
@@ -236,48 +389,106 @@ fn web3_vectors() {
     let sol = derive_solana_keypair_from_ed_secret_key(&ed.secret_key).unwrap();
     assert_eq!(&sol.public_key[..], &b64(&w["sol"]["pub"])[..]);
     assert_eq!(&sol.secret_key[..], &b64(&w["sol"]["sec"])[..]);
-    assert_eq!(solana_address_from_public_key(&sol.public_key), s(&w["sol"]["address"]));
-    assert_eq!(sign_with_solana_material(&sol, s(&w["solSig"]["message"]).as_bytes()), b64(&w["solSig"]["sig"]));
+    assert_eq!(
+        solana_address_from_public_key(&sol.public_key),
+        s(&w["sol"]["address"])
+    );
+    assert_eq!(
+        sign_with_solana_material(&sol, s(&w["solSig"]["message"]).as_bytes()),
+        b64(&w["solSig"]["sig"])
+    );
 }
 
 #[test]
 fn rust_created_account_end_to_end() {
     let m = &v()["mnemonics"][0];
-    let mut k = MajikKey::create(s(&m["phrase"]), "hunter2 hunter2", Some("rs"), &MajikKeyCreateOptions { keys: vec![KeyId::Btc, KeyId::Sol, KeyId::Eth], ..Default::default() }).unwrap();
+    let mut k = MajikKey::create(
+        s(&m["phrase"]),
+        "hunter2 hunter2",
+        Some("rs"),
+        &MajikKeyCreateOptions {
+            keys: vec![KeyId::Btc, KeyId::Sol, KeyId::Eth],
+            ..Default::default()
+        },
+    )
+    .unwrap();
     assert_eq!(k.id(), s(&m["fingerprint"]));
-    assert_eq!(k.available_keys(None), vec![KeyId::X25519, KeyId::Ed25519, KeyId::MlKem768, KeyId::MlDsa87, KeyId::Btc, KeyId::Eth, KeyId::Sol]);
+    assert_eq!(
+        k.available_keys(None),
+        vec![
+            KeyId::X25519,
+            KeyId::Ed25519,
+            KeyId::MlKem768,
+            KeyId::MlDsa87,
+            KeyId::Btc,
+            KeyId::Eth,
+            KeyId::Sol
+        ]
+    );
     for (id, kp) in m["keys"].as_object().unwrap() {
         if let Ok(kid) = id.parse::<KeyId>() {
-            if k.store_has(kid) { assert_eq!(&k.get_private_key(kid).unwrap()[..], &b64(&kp["sec"])[..], "{id}"); }
+            if k.store_has(kid) {
+                assert_eq!(
+                    &k.get_private_key(kid).unwrap()[..],
+                    &b64(&kp["sec"])[..],
+                    "{id}"
+                );
+            }
         }
     }
     // keypair handle + derived Solana view
     let h = k.get_keypair(KeyId::Sol).unwrap();
     assert_eq!(h.public().unwrap(), b64(&v()["web3"]["sol"]["pub"]));
-    assert_eq!(k.get_solana_address(None).unwrap(), s(&v()["web3"]["sol"]["address"]));
-    assert_eq!(k.get_ethereum_address().unwrap(), s(&v()["web3"]["eth"]["address"]));
+    assert_eq!(
+        k.get_solana_address(None).unwrap(),
+        s(&v()["web3"]["sol"]["address"])
+    );
+    assert_eq!(
+        k.get_ethereum_address().unwrap(),
+        s(&v()["web3"]["eth"]["address"])
+    );
     let w3 = k.web3().unwrap();
     assert!(w3.bitcoin.is_some() && w3.ethereum.is_some());
-    assert_eq!(w3.ethereum.as_ref().unwrap().address(), s(&v()["web3"]["eth"]["address"]));
-    assert_eq!(w3.bitcoin.as_ref().unwrap().get_bitcoin_address().unwrap(), s(&v()["web3"]["btcDom"]["address"]));
+    assert_eq!(
+        w3.ethereum.as_ref().unwrap().address(),
+        s(&v()["web3"]["eth"]["address"])
+    );
+    assert_eq!(
+        w3.bitcoin.as_ref().unwrap().get_bitcoin_address().unwrap(),
+        s(&v()["web3"]["btcDom"]["address"])
+    );
 
     // dangerous JSON round trip
     let d = k.to_dangerous_json().unwrap();
     let k2 = MajikKey::from_dangerous_json(&d).unwrap();
     assert!(k2.is_unlocked());
-    assert_eq!(&k2.get_private_key(KeyId::MlDsa87).unwrap()[..], &k.get_private_key(KeyId::MlDsa87).unwrap()[..]);
+    assert_eq!(
+        &k2.get_private_key(KeyId::MlDsa87).unwrap()[..],
+        &k.get_private_key(KeyId::MlDsa87).unwrap()[..]
+    );
 
     // backup export → import
     let exported = k.export_mnemonic_backup(s(&m["phrase"])).unwrap();
-    let k3 = MajikKey::import_from_mnemonic_backup(&exported, s(&m["phrase"]), "other pw", None, &Default::default()).unwrap();
+    let k3 = MajikKey::import_from_mnemonic_backup(
+        &exported,
+        s(&m["phrase"]),
+        "other pw",
+        None,
+        &Default::default(),
+    )
+    .unwrap();
     assert_eq!(k3.fingerprint(), k.fingerprint());
 
     // with_auto_lock locks afterwards, even when the closure panics
-    let pk = k.with_auto_lock(|k| k.get_public_key(KeyId::Ed25519).unwrap()).unwrap();
+    let pk = k
+        .with_auto_lock(|k| k.get_public_key(KeyId::Ed25519).unwrap())
+        .unwrap();
     assert_eq!(pk, b64(&m["keys"]["classic:ed25519"]["pub"]));
     assert!(k.is_locked());
     k.unlock("hunter2 hunter2").unwrap();
-    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { let _ = k.with_auto_lock(|_| panic!("boom")); }));
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = k.with_auto_lock(|_| panic!("boom"));
+    }));
     assert!(r.is_err() && k.is_locked());
     assert!(k.get_private_key(KeyId::X25519).is_err());
 
@@ -290,8 +501,22 @@ fn rust_created_account_end_to_end() {
 
 #[test]
 fn japanese_and_generation() {
-    let ja = v()["mnemonics"].as_array().unwrap().iter().find(|m| s(&m["name"]) == "ja12").unwrap();
-    let k = MajikKey::create(s(&ja["phrase"]), "pw pw pw", None, &MajikKeyCreateOptions { mnemonic_language: Some(MnemonicLanguage::Ja), ..Default::default() }).unwrap();
+    let ja = v()["mnemonics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| s(&m["name"]) == "ja12")
+        .unwrap();
+    let k = MajikKey::create(
+        s(&ja["phrase"]),
+        "pw pw pw",
+        None,
+        &MajikKeyCreateOptions {
+            mnemonic_language: Some(MnemonicLanguage::Ja),
+            ..Default::default()
+        },
+    )
+    .unwrap();
     assert_eq!(k.id(), s(&ja["fingerprint"]));
     for l in MnemonicLanguage::ALL {
         for strength in [128, 256] {
@@ -318,7 +543,9 @@ fn unknown_future_key_entries_round_trip_untouched() {
     // but we refuse to re-encrypt an account holding secrets we can't interpret
     let mut k = k;
     k.unlock(s(&acct["passphrase"])).unwrap();
-    assert!(k.update_passphrase(s(&acct["passphrase"]), "new pass").is_err());
+    assert!(k
+        .update_passphrase(s(&acct["passphrase"]), "new pass")
+        .is_err());
     // and reject JSON from a newer schema
     j["keysVersion"] = 99.into();
     assert!(MajikKey::from_json_str(&j.to_string()).is_err());
@@ -335,9 +562,17 @@ fn tampered_json_is_rejected() {
 
 struct MockPng;
 impl PngCodec for MockPng {
-    fn is_valid_png(&self, png: &[u8]) -> bool { looks_like_png(png) }
-    fn encode(&self, p: &str) -> BackupResult<Vec<u8>> { let mut v = vec![0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]; v.extend(p.as_bytes()); Ok(v) }
-    fn decode(&self, png: &[u8]) -> BackupResult<String> { Ok(String::from_utf8(png[8..].to_vec()).unwrap()) }
+    fn is_valid_png(&self, png: &[u8]) -> bool {
+        looks_like_png(png)
+    }
+    fn encode(&self, p: &str) -> BackupResult<Vec<u8>> {
+        let mut v = vec![0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+        v.extend(p.as_bytes());
+        Ok(v)
+    }
+    fn decode(&self, png: &[u8]) -> BackupResult<String> {
+        Ok(String::from_utf8(png[8..].to_vec()).unwrap())
+    }
 }
 
 #[test]
@@ -352,7 +587,10 @@ fn backup_zip_json_png() {
     // JSON only
     let zip = b.to_zip(None, &Default::default()).unwrap();
     assert!(looks_like_zip(&zip));
-    assert_eq!(MajikKeyBackup::from_zip(&zip, None).unwrap().seed_phrase(), b.seed_phrase());
+    assert_eq!(
+        MajikKeyBackup::from_zip(&zip, None).unwrap().seed_phrase(),
+        b.seed_phrase()
+    );
     // PNG + JSON
     let zip = b.to_zip(Some(&MockPng), &Default::default()).unwrap();
     let r = MajikKeyBackup::from_zip(&zip, Some(&MockPng)).unwrap();
@@ -370,10 +608,12 @@ fn backup_zip_json_png() {
 
 #[test]
 fn message_identity_integrity() {
-
     let m = &v()["mnemonics"][0];
     let k = MajikKey::create(s(&m["phrase"]), "pw pw pw", Some("Me"), &Default::default()).unwrap();
-    let user = MajikUserRef { id: "u1".into(), display_name: "User".into() };
+    let user = MajikUserRef {
+        id: "u1".into(),
+        display_name: "User".into(),
+    };
     let id = k.to_majik_message_identity(&user, None).unwrap();
     assert!(id.validate_integrity() && id.matches("u1", k.public_key_base64()).unwrap());
     assert_eq!(id.label(), "Me");
@@ -391,7 +631,10 @@ fn ml_kem_roundtrip_with_ts_secret_key() {
     let back = ml_kem_decapsulate(&ct, &b64(&kp["sec"])).unwrap();
     assert_eq!(&ss[..], &back[..]);
     let seed = hex::decode(s(&v()["mnemonics"][0]["seedHex"])).unwrap();
-    assert_eq!(derive_ml_kem_keypair_from_seed(&seed).unwrap().public_key, b64(&kp["pub"]));
+    assert_eq!(
+        derive_ml_kem_keypair_from_seed(&seed).unwrap().public_key,
+        b64(&kp["pub"])
+    );
     assert!(derive_ml_kem_keypair_from_seed(&seed[..32]).is_err());
 }
 
@@ -399,6 +642,12 @@ fn ml_kem_roundtrip_with_ts_secret_key() {
 fn x25519_agreement() {
     let a = generate_ed25519_keypair().unwrap();
     let b = generate_ed25519_keypair().unwrap();
-    assert_eq!(&x25519_shared_secret(&a.x_secret, &b.x_public).unwrap()[..], &x25519_shared_secret(&b.x_secret, &a.x_public).unwrap()[..]);
-    assert!(x25519_shared_secret(&a.x_secret, &[0u8; 32]).is_err(), "small-order point rejected");
+    assert_eq!(
+        &x25519_shared_secret(&a.x_secret, &b.x_public).unwrap()[..],
+        &x25519_shared_secret(&b.x_secret, &a.x_public).unwrap()[..]
+    );
+    assert!(
+        x25519_shared_secret(&a.x_secret, &[0u8; 32]).is_err(),
+        "small-order point rejected"
+    );
 }

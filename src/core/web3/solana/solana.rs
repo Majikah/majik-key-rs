@@ -33,7 +33,9 @@ fn check_len(ed_secret_key: &[u8]) -> MajikKeyResult<()> {
     Ok(())
 }
 
-pub fn derive_solana_keypair_from_ed_secret_key(ed_secret_key: &[u8]) -> MajikKeyResult<SolanaKeypairMaterial> {
+pub fn derive_solana_keypair_from_ed_secret_key(
+    ed_secret_key: &[u8],
+) -> MajikKeyResult<SolanaKeypairMaterial> {
     check_len(ed_secret_key)?;
     let mut h = Sha256::new();
     h.update(&ed_secret_key[..ED25519_SEED_LENGTH]);
@@ -45,17 +47,25 @@ pub fn derive_solana_keypair_from_ed_secret_key(ed_secret_key: &[u8]) -> MajikKe
     let mut secret_key = Zeroizing::new([0u8; 64]);
     secret_key[..32].copy_from_slice(&*seed);
     secret_key[32..].copy_from_slice(&public_key);
-    Ok(SolanaKeypairMaterial { public_key, secret_key })
+    Ok(SolanaKeypairMaterial {
+        public_key,
+        secret_key,
+    })
 }
 
 /// ⚠️ Not recommended: the same private key would secure both Majik message signing AND Solana.
-pub fn solana_material_from_ed25519_secret_key(ed_secret_key: &[u8]) -> MajikKeyResult<SolanaKeypairMaterial> {
+pub fn solana_material_from_ed25519_secret_key(
+    ed_secret_key: &[u8],
+) -> MajikKeyResult<SolanaKeypairMaterial> {
     check_len(ed_secret_key)?;
     let mut secret_key = Zeroizing::new([0u8; 64]);
     secret_key.copy_from_slice(ed_secret_key);
     let mut public_key = [0u8; 32];
     public_key.copy_from_slice(&ed_secret_key[ED25519_SEED_LENGTH..]);
-    Ok(SolanaKeypairMaterial { public_key, secret_key })
+    Ok(SolanaKeypairMaterial {
+        public_key,
+        secret_key,
+    })
 }
 
 /// Solana address = base58 of the public key.
@@ -67,7 +77,10 @@ pub fn solana_address_from_public_key(public_key: &[u8]) -> String {
 pub fn sign_with_solana_material(material: &SolanaKeypairMaterial, message: &[u8]) -> Vec<u8> {
     let mut seed = Zeroizing::new([0u8; 32]);
     seed.copy_from_slice(&material.secret_key[..32]);
-    SigningKey::from_bytes(&seed).sign(message).to_bytes().to_vec()
+    SigningKey::from_bytes(&seed)
+        .sign(message)
+        .to_bytes()
+        .to_vec()
 }
 
 #[derive(Debug, Clone, Copy, Default)]

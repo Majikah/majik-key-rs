@@ -20,10 +20,14 @@ impl MajikKeyValidator {
 
     pub fn validate_passphrase(passphrase: &str, field_name: &str) -> MajikKeyResult<()> {
         if passphrase.is_empty() {
-            return Err(MajikKeyError::msg(format!("{field_name} must be a non-empty string")));
+            return Err(MajikKeyError::msg(format!(
+                "{field_name} must be a non-empty string"
+            )));
         }
         if passphrase.trim().is_empty() {
-            return Err(MajikKeyError::msg(format!("{field_name} cannot be empty or whitespace")));
+            return Err(MajikKeyError::msg(format!(
+                "{field_name} cannot be empty or whitespace"
+            )));
         }
         Ok(())
     }
@@ -47,7 +51,9 @@ impl MajikKeyValidator {
     pub fn validate_json(json: &MajikKeyJson) -> MajikKeyResult<()> {
         let req = |v: &str, f: &str| -> MajikKeyResult<()> {
             if v.is_empty() {
-                Err(MajikKeyError::msg(format!("Invalid JSON: missing or invalid '{f}' field")))
+                Err(MajikKeyError::msg(format!(
+                    "Invalid JSON: missing or invalid '{f}' field"
+                )))
             } else {
                 Ok(())
             }
@@ -55,7 +61,10 @@ impl MajikKeyValidator {
         req(&json.id, "id")?;
         req(&json.public_key, "publicKey")?;
         req(&json.fingerprint, "fingerprint")?;
-        req(json.encrypted_private_key.as_deref().unwrap_or(""), "encryptedPrivateKey")?;
+        req(
+            json.encrypted_private_key.as_deref().unwrap_or(""),
+            "encryptedPrivateKey",
+        )?;
         req(&json.salt, "salt")?;
         req(&json.backup, "backup")?;
         req(&json.timestamp, "timestamp")?;
@@ -68,23 +77,38 @@ impl MajikKeyValidator {
             .as_object()
             .ok_or_else(|| MajikKeyError::msg("Invalid JSON: must be an object"))?;
         for f in ["id", "fingerprint", "salt", "backup", "timestamp"] {
-            if !obj.get(f).and_then(Value::as_str).is_some_and(|s| !s.is_empty()) {
-                return Err(MajikKeyError::msg(format!("Invalid JSON: missing or invalid '{f}' field")));
+            if !obj
+                .get(f)
+                .and_then(Value::as_str)
+                .is_some_and(|s| !s.is_empty())
+            {
+                return Err(MajikKeyError::msg(format!(
+                    "Invalid JSON: missing or invalid '{f}' field"
+                )));
             }
         }
         if let Some(l) = obj.get("label") {
             if !l.is_string() {
-                return Err(MajikKeyError::msg("Invalid JSON: 'label' must be a string if provided"));
+                return Err(MajikKeyError::msg(
+                    "Invalid JSON: 'label' must be a string if provided",
+                ));
             }
         }
         Ok(serde_json::from_value(value.clone())?)
     }
 
     pub fn assert(condition: bool, message: &str) -> MajikKeyResult<()> {
-        if condition { Ok(()) } else { Err(MajikKeyError::msg(message)) }
+        if condition {
+            Ok(())
+        } else {
+            Err(MajikKeyError::msg(message))
+        }
     }
 
     pub fn assert_string(value: &str, field: &str) -> MajikKeyResult<()> {
-        Self::assert(!value.trim().is_empty(), &format!("{field} must be a non-empty string"))
+        Self::assert(
+            !value.trim().is_empty(),
+            &format!("{field} must be a non-empty string"),
+        )
     }
 }

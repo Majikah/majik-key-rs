@@ -19,6 +19,7 @@ use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
+use crate::core::crypto::constants::LEGACY_MAJIK_MNEMONIC_SALT;
 use crate::core::crypto::constants::{
     backup_salt_for, KdfVersion, BACKUP_SALT_WRITE_VERSION, KEYS_VERSION, SALT_SIZE,
 };
@@ -27,7 +28,6 @@ use crate::core::crypto::crypto_provider::{
     derive_key_from_passphrase, derive_key_from_passphrase_argon2, fingerprint_from_public_raw,
     generate_random_bytes, mnemonic_to_seed, validate_mnemonic_in, IV_LENGTH,
 };
-use crate::core::crypto::constants::LEGACY_MAJIK_MNEMONIC_SALT;
 use crate::core::crypto::wordlist::MnemonicLanguage;
 use crate::core::database::system::identity::{
     IdentityOptions, MajikContactData, MajikMessageIdentity, MajikUserRef,
@@ -51,8 +51,7 @@ use crate::core::utils::{
 };
 use crate::core::validator::MajikKeyValidator;
 use crate::core::web3::bitcoin::bitcoin::{
-    derive_bitcoin_keypair_from_seed, to_wif,
-    BitcoinDerivationOptions, BitcoinKeypairMaterial,
+    derive_bitcoin_keypair_from_seed, to_wif, BitcoinDerivationOptions, BitcoinKeypairMaterial,
 };
 use crate::core::web3::bitcoin::types::MajikKeyBitcoinNamespace;
 use crate::core::web3::ethereum::ethereum::{
@@ -190,7 +189,9 @@ impl MajikKey {
             .store
             .get_public_key(KeyId::X25519)?
             .try_into()
-            .map_err(|_| MajikKeyError::InvalidJson("classic:x25519 public key must be 32 bytes".into()))?;
+            .map_err(|_| {
+                MajikKeyError::InvalidJson("classic:x25519 public key must be 32 bytes".into())
+            })?;
         Ok(Self {
             id: init.id,
             public_key: X25519RawKey { raw: x_pub },
@@ -208,25 +209,53 @@ impl MajikKey {
 
     // ── Getters ──────────────────────────────────────────────────────────────
 
-    pub fn id(&self) -> &str { &self.id }
-    pub fn fingerprint(&self) -> &str { &self.fingerprint }
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+    pub fn fingerprint(&self) -> &str {
+        &self.fingerprint
+    }
     /// X25519 public key. Always available, even when locked.
-    pub fn public_key(&self) -> &X25519RawKey { &self.public_key }
-    pub fn public_key_base64(&self) -> &str { &self.public_key_base64 }
-    pub fn label(&self) -> &str { &self.label }
-    pub fn mnemonic_language(&self) -> MnemonicLanguage { self.mnemonic_language }
-    pub fn backup(&self) -> &str { &self.backup }
-    pub fn timestamp(&self) -> Timestamp { self.timestamp }
-    pub fn kdf_version(&self) -> KdfVersion { self.kdf_version }
-    pub fn is_argon2id(&self) -> bool { self.kdf_version == KdfVersion::Argon2id }
-    pub fn is_locked(&self) -> bool { !self.store.is_unlocked() }
-    pub fn is_unlocked(&self) -> bool { self.store.is_unlocked() }
+    pub fn public_key(&self) -> &X25519RawKey {
+        &self.public_key
+    }
+    pub fn public_key_base64(&self) -> &str {
+        &self.public_key_base64
+    }
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+    pub fn mnemonic_language(&self) -> MnemonicLanguage {
+        self.mnemonic_language
+    }
+    pub fn backup(&self) -> &str {
+        &self.backup
+    }
+    pub fn timestamp(&self) -> Timestamp {
+        self.timestamp
+    }
+    pub fn kdf_version(&self) -> KdfVersion {
+        self.kdf_version
+    }
+    pub fn is_argon2id(&self) -> bool {
+        self.kdf_version == KdfVersion::Argon2id
+    }
+    pub fn is_locked(&self) -> bool {
+        !self.store.is_unlocked()
+    }
+    pub fn is_unlocked(&self) -> bool {
+        self.store.is_unlocked()
+    }
 
     /// `true` if this account holds every key in `CORE_KEYS`. Legacy accounts may not.
-    pub fn is_core_complete(&self) -> bool { self.store.has_all(&CORE_KEYS) }
+    pub fn is_core_complete(&self) -> bool {
+        self.store.has_all(&CORE_KEYS)
+    }
 
     /// `true` if this account is on Argon2id *and* has ML-KEM-768 keys.
-    pub fn is_fully_upgraded(&self) -> bool { self.is_argon2id() && self.store.has(KeyId::MlKem768) }
+    pub fn is_fully_upgraded(&self) -> bool {
+        self.is_argon2id() && self.store.has(KeyId::MlKem768)
+    }
 
     // ── Registry accessors ───────────────────────────────────────────────────
 
@@ -240,16 +269,25 @@ impl MajikKey {
         def.kind == KeyKind::Derived && def.derived_from.is_some_and(|src| self.store.has(src))
     }
 
-    pub fn has_keys(&self, ids: &[KeyId]) -> bool { ids.iter().all(|i| self.has_key(*i)) }
+    pub fn has_keys(&self, ids: &[KeyId]) -> bool {
+        ids.iter().all(|i| self.has_key(*i))
+    }
 
     /// Which of `ids` (default: the core four) are NOT on this account.
     pub fn missing_keys(&self, ids: Option<&[KeyId]>) -> Vec<KeyId> {
-        ids.unwrap_or(&CORE_KEYS).iter().copied().filter(|i| !self.has_key(*i)).collect()
+        ids.unwrap_or(&CORE_KEYS)
+            .iter()
+            .copied()
+            .filter(|i| !self.has_key(*i))
+            .collect()
     }
 
     /// Namespaced ids of every key available on this account, in canonical order.
     pub fn available_keys(&self, family: Option<KeyFamily>) -> Vec<KeyId> {
-        known_key_ids(family).into_iter().filter(|id| self.has_key(*id)).collect()
+        known_key_ids(family)
+            .into_iter()
+            .filter(|id| self.has_key(*id))
+            .collect()
     }
 
     /// Metadata for every available key. No secret material.
@@ -271,7 +309,9 @@ impl MajikKey {
     }
 
     /// Every algorithm id this library version can create/enable.
-    pub fn supported_keys() -> Vec<KeyId> { enableable_key_ids() }
+    pub fn supported_keys() -> Vec<KeyId> {
+        enableable_key_ids()
+    }
 
     /// Public key bytes for `id`. Works while locked (derived views need an unlocked account).
     pub fn get_public_key(&self, id: KeyId) -> MajikKeyResult<Vec<u8>> {
@@ -287,7 +327,9 @@ impl MajikKey {
     /// Secret key bytes for `id` (zeroizing copy). Errors if locked or absent. ⚠️ Live key material.
     pub fn get_private_key(&self, id: KeyId) -> MajikKeyResult<SecretBytes> {
         if id == KeyId::Sol && self.store.has(KeyId::Ed25519) {
-            return Ok(Zeroizing::new(self.get_solana_keypair_material(None)?.secret_key.to_vec()));
+            return Ok(Zeroizing::new(
+                self.get_solana_keypair_material(None)?.secret_key.to_vec(),
+            ));
         }
         Ok(Zeroizing::new(self.require_secret(id, None)?.to_vec()))
     }
@@ -324,33 +366,79 @@ impl MajikKey {
     // ── Deprecated per-algorithm getters (wrappers over the registry) ────────
 
     #[deprecated(note = "use get_public_key(KeyId::MlKem768)")]
-    pub fn ml_kem_public_key(&self) -> Option<Vec<u8>> { self.store.get_public_key(KeyId::MlKem768).ok().map(<[u8]>::to_vec) }
+    pub fn ml_kem_public_key(&self) -> Option<Vec<u8>> {
+        self.store
+            .get_public_key(KeyId::MlKem768)
+            .ok()
+            .map(<[u8]>::to_vec)
+    }
     #[deprecated(note = "use get_private_key(KeyId::MlKem768)")]
-    pub fn ml_kem_secret_key(&self) -> Option<&[u8]> { self.store.peek_secret_key(KeyId::MlKem768) }
+    pub fn ml_kem_secret_key(&self) -> Option<&[u8]> {
+        self.store.peek_secret_key(KeyId::MlKem768)
+    }
     #[deprecated(note = "use has_key(KeyId::MlKem768)")]
-    pub fn has_ml_kem(&self) -> bool { self.store.has(KeyId::MlKem768) }
+    pub fn has_ml_kem(&self) -> bool {
+        self.store.has(KeyId::MlKem768)
+    }
     #[deprecated(note = "use get_public_key(KeyId::Ed25519)")]
-    pub fn ed_public_key(&self) -> Option<Vec<u8>> { self.store.get_public_key(KeyId::Ed25519).ok().map(<[u8]>::to_vec) }
+    pub fn ed_public_key(&self) -> Option<Vec<u8>> {
+        self.store
+            .get_public_key(KeyId::Ed25519)
+            .ok()
+            .map(<[u8]>::to_vec)
+    }
     #[deprecated(note = "use get_public_key(KeyId::MlDsa87)")]
-    pub fn ml_dsa_public_key(&self) -> Option<Vec<u8>> { self.store.get_public_key(KeyId::MlDsa87).ok().map(<[u8]>::to_vec) }
+    pub fn ml_dsa_public_key(&self) -> Option<Vec<u8>> {
+        self.store
+            .get_public_key(KeyId::MlDsa87)
+            .ok()
+            .map(<[u8]>::to_vec)
+    }
     #[deprecated(note = "use has_keys(&[KeyId::Ed25519, KeyId::MlDsa87])")]
-    pub fn has_signing_keys(&self) -> bool { self.store.has(KeyId::Ed25519) && self.store.has(KeyId::MlDsa87) }
+    pub fn has_signing_keys(&self) -> bool {
+        self.store.has(KeyId::Ed25519) && self.store.has(KeyId::MlDsa87)
+    }
     #[deprecated(note = "use get_public_key(KeyId::Btc)")]
-    pub fn btc_public_key(&self) -> Option<Vec<u8>> { self.store.get_public_key(KeyId::Btc).ok().map(<[u8]>::to_vec) }
+    pub fn btc_public_key(&self) -> Option<Vec<u8>> {
+        self.store
+            .get_public_key(KeyId::Btc)
+            .ok()
+            .map(<[u8]>::to_vec)
+    }
     #[deprecated(note = "use has_key(KeyId::Btc)")]
-    pub fn has_bitcoin(&self) -> bool { self.store.has(KeyId::Btc) }
+    pub fn has_bitcoin(&self) -> bool {
+        self.store.has(KeyId::Btc)
+    }
 
     #[deprecated(note = "use get_private_key(KeyId::MlKem768)")]
     pub fn get_ml_kem_secret_key(&self) -> MajikKeyResult<SecretBytes> {
-        Ok(Zeroizing::new(self.require_secret(KeyId::MlKem768, Some("No ML-KEM secret key — add it with add_keys() (requires the mnemonic)."))?.to_vec()))
+        Ok(Zeroizing::new(
+            self.require_secret(
+                KeyId::MlKem768,
+                Some("No ML-KEM secret key — add it with add_keys() (requires the mnemonic)."),
+            )?
+            .to_vec(),
+        ))
     }
     #[deprecated(note = "use get_private_key(KeyId::Ed25519)")]
     pub fn get_ed_secret_key(&self) -> MajikKeyResult<SecretBytes> {
-        Ok(Zeroizing::new(self.require_secret(KeyId::Ed25519, Some("No Ed25519 secret key — add it with add_keys() (requires the mnemonic)."))?.to_vec()))
+        Ok(Zeroizing::new(
+            self.require_secret(
+                KeyId::Ed25519,
+                Some("No Ed25519 secret key — add it with add_keys() (requires the mnemonic)."),
+            )?
+            .to_vec(),
+        ))
     }
     #[deprecated(note = "use get_private_key(KeyId::MlDsa87)")]
     pub fn get_ml_dsa_secret_key(&self) -> MajikKeyResult<SecretBytes> {
-        Ok(Zeroizing::new(self.require_secret(KeyId::MlDsa87, Some("No ML-DSA secret key — add it with add_keys() (requires the mnemonic)."))?.to_vec()))
+        Ok(Zeroizing::new(
+            self.require_secret(
+                KeyId::MlDsa87,
+                Some("No ML-DSA secret key — add it with add_keys() (requires the mnemonic)."),
+            )?
+            .to_vec(),
+        ))
     }
     #[deprecated(note = "use get_private_key(KeyId::Btc)")]
     pub fn get_btc_secret_key(&self) -> MajikKeyResult<SecretBytes> {
@@ -358,7 +446,9 @@ impl MajikKey {
     }
     #[deprecated(note = "use get_private_key(KeyId::X25519)")]
     pub fn get_private_key_base64(&self) -> MajikKeyResult<Zeroizing<String>> {
-        Ok(Zeroizing::new(array_to_base64(self.require_secret(KeyId::X25519, None)?)))
+        Ok(Zeroizing::new(array_to_base64(
+            self.require_secret(KeyId::X25519, None)?,
+        )))
     }
 
     /// Non-secret snapshot of this account's state.
@@ -401,7 +491,13 @@ impl MajikKey {
         validate_mnemonic_in(mnemonic, language)?;
 
         let d = Self::derive_from_mnemonic(mnemonic, language, passphrase, &ids)?;
-        let backup = Self::export_mnemonic_backup_inner(&d.fingerprint, &d.fingerprint, &d.x_public, &d.x_secret, mnemonic)?;
+        let backup = Self::export_mnemonic_backup_inner(
+            &d.fingerprint,
+            &d.fingerprint,
+            &d.x_public,
+            &d.x_secret,
+            mnemonic,
+        )?;
 
         Self::new(MajikKeyInit {
             id: d.fingerprint.clone(),
@@ -439,10 +535,17 @@ impl MajikKey {
     ///    mnemonic needed). Re-serialize with `to_json()` to persist the upgraded shape.
     pub fn from_json(parsed: &MajikKeyJson) -> MajikKeyResult<MajikKey> {
         let store = if let Some(keys) = &parsed.keys {
-            for (v, f) in [(&parsed.id, "id"), (&parsed.fingerprint, "fingerprint"), (&parsed.salt, "salt"),
-                           (&parsed.backup, "backup"), (&parsed.timestamp, "timestamp")] {
+            for (v, f) in [
+                (&parsed.id, "id"),
+                (&parsed.fingerprint, "fingerprint"),
+                (&parsed.salt, "salt"),
+                (&parsed.backup, "backup"),
+                (&parsed.timestamp, "timestamp"),
+            ] {
                 if v.is_empty() {
-                    return Err(MajikKeyError::msg(format!("Invalid MajikKey JSON: missing \"{f}\"")));
+                    return Err(MajikKeyError::msg(format!(
+                        "Invalid MajikKey JSON: missing \"{f}\""
+                    )));
                 }
             }
             if let Some(v) = parsed.keys_version {
@@ -454,7 +557,9 @@ impl MajikKey {
             }
             let store = KeyStore::from_entries(keys)?;
             if !store.has(KeyId::X25519) {
-                return Err(MajikKeyError::msg("Invalid MajikKey JSON: `keys` has no classic:x25519 entry"));
+                return Err(MajikKeyError::msg(
+                    "Invalid MajikKey JSON: `keys` has no classic:x25519 entry",
+                ));
             }
             // If the flat legacy field is also present it must agree (corruption/tamper check).
             if !parsed.public_key.is_empty()
@@ -492,7 +597,9 @@ impl MajikKey {
     /// ⚠️ DANGEROUS — output contains unencrypted private key material.
     pub fn to_dangerous_json(&self) -> MajikKeyResult<MajikKeyDangerousJson> {
         if self.is_locked() {
-            return Err(MajikKeyError::msg("MajikKey must be unlocked to export dangerous JSON."));
+            return Err(MajikKeyError::msg(
+                "MajikKey must be unlocked to export dangerous JSON.",
+            ));
         }
         if !self.has_keys(&CORE_KEYS) {
             return Err(MajikKeyError::msg(
@@ -505,14 +612,20 @@ impl MajikKey {
             .into_iter()
             .map(|(id, s)| (id.to_string(), array_to_base64(s)))
             .collect();
-        let s = |id: KeyId| -> MajikKeyResult<String> { Ok(array_to_base64(self.store.get_secret_key(id)?)) };
+        let s = |id: KeyId| -> MajikKeyResult<String> {
+            Ok(array_to_base64(self.store.get_secret_key(id)?))
+        };
         Ok(MajikKeyDangerousJson {
             base: self.to_json(),
             private_key_base64: s(KeyId::X25519)?,
             ml_kem_secret_key_base64: s(KeyId::MlKem768)?,
             ed_secret_key_base64: s(KeyId::Ed25519)?,
             ml_dsa_secret_key_base64: s(KeyId::MlDsa87)?,
-            btc_secret_key_base64: if self.store.has(KeyId::Btc) { Some(s(KeyId::Btc)?) } else { None },
+            btc_secret_key_base64: if self.store.has(KeyId::Btc) {
+                Some(s(KeyId::Btc)?)
+            } else {
+                None
+            },
             secret_keys: Some(secret_keys),
         })
     }
@@ -521,13 +634,20 @@ impl MajikKey {
     /// ⚠️ DANGEROUS — input contains unencrypted private key material. No KDF involved.
     pub fn from_dangerous_json(parsed: &MajikKeyDangerousJson) -> MajikKeyResult<MajikKey> {
         let b = &parsed.base;
-        if b.id.is_empty() || b.fingerprint.is_empty() || b.public_key.is_empty()
-            || parsed.private_key_base64.is_empty() || b.ed_public_key.is_none()
-            || parsed.ed_secret_key_base64.is_empty() || b.ml_dsa_public_key.is_none()
-            || parsed.ml_dsa_secret_key_base64.is_empty() || b.ml_kem_public_key.is_none()
+        if b.id.is_empty()
+            || b.fingerprint.is_empty()
+            || b.public_key.is_empty()
+            || parsed.private_key_base64.is_empty()
+            || b.ed_public_key.is_none()
+            || parsed.ed_secret_key_base64.is_empty()
+            || b.ml_dsa_public_key.is_none()
+            || parsed.ml_dsa_secret_key_base64.is_empty()
+            || b.ml_kem_public_key.is_none()
             || parsed.ml_kem_secret_key_base64.is_empty()
         {
-            return Err(MajikKeyError::msg("Invalid MajikKeyDangerousJSON — missing required fields"));
+            return Err(MajikKeyError::msg(
+                "Invalid MajikKeyDangerousJSON — missing required fields",
+            ));
         }
 
         let mut store = match &b.keys {
@@ -573,9 +693,15 @@ impl MajikKey {
 
     // ── MnemonicJSON ─────────────────────────────────────────────────────────
 
-    pub fn to_mnemonic_json(&self, mnemonic: &str, passphrase: Option<&str>) -> MajikKeyResult<MnemonicJson> {
+    pub fn to_mnemonic_json(
+        &self,
+        mnemonic: &str,
+        passphrase: Option<&str>,
+    ) -> MajikKeyResult<MnemonicJson> {
         if self.is_locked() {
-            return Err(MajikKeyError::msg("Cannot export locked MajikKey to MnemonicJSON. Unlock first."));
+            return Err(MajikKeyError::msg(
+                "Cannot export locked MajikKey to MnemonicJSON. Unlock first.",
+            ));
         }
         MajikKeyValidator::validate_mnemonic(mnemonic)?;
         if let Some(p) = passphrase {
@@ -584,7 +710,9 @@ impl MajikKey {
         Ok(MnemonicJson {
             id: self.backup.clone(),
             seed: seed_string_to_array(mnemonic.trim()),
-            phrase: passphrase.map(|p| p.trim().to_string()).filter(|p| !p.is_empty()),
+            phrase: passphrase
+                .map(|p| p.trim().to_string())
+                .filter(|p| !p.is_empty()),
             language: Some(self.mnemonic_language),
             version: None,
         })
@@ -603,7 +731,10 @@ impl MajikKey {
         MajikKeyValidator::validate_mnemonic(&mnemonic)?;
 
         // Explicit caller option wins; otherwise preserve the language embedded in the MnemonicJSON.
-        let language = options.mnemonic_language.or(json.language).unwrap_or_default();
+        let language = options
+            .mnemonic_language
+            .or(json.language)
+            .unwrap_or_default();
         validate_mnemonic_in(&mnemonic, language)?;
 
         let mut opts = options.clone();
@@ -630,9 +761,15 @@ impl MajikKey {
         Ok(self)
     }
 
-    pub fn update_passphrase(&mut self, current_passphrase: &str, new_passphrase: &str) -> MajikKeyResult<&mut Self> {
+    pub fn update_passphrase(
+        &mut self,
+        current_passphrase: &str,
+        new_passphrase: &str,
+    ) -> MajikKeyResult<&mut Self> {
         if self.is_locked() {
-            return Err(MajikKeyError::msg("MajikKey must be unlocked to update passphrase"));
+            return Err(MajikKeyError::msg(
+                "MajikKey must be unlocked to update passphrase",
+            ));
         }
         MajikKeyValidator::validate_passphrase(current_passphrase, "Current passphrase")?;
         MajikKeyValidator::validate_passphrase(new_passphrase, "New passphrase")?;
@@ -658,11 +795,18 @@ impl MajikKey {
     /// passphrase must decrypt it, before anything is added. Account must be on Argon2id.
     ///
     /// Returns the ids that were added.
-    pub fn add_keys(&mut self, ids: &[KeyId], mnemonic: &str, passphrase: &str) -> MajikKeyResult<Vec<KeyId>> {
+    pub fn add_keys(
+        &mut self,
+        ids: &[KeyId],
+        mnemonic: &str,
+        passphrase: &str,
+    ) -> MajikKeyResult<Vec<KeyId>> {
         MajikKeyValidator::validate_mnemonic(mnemonic)?;
         MajikKeyValidator::validate_passphrase(passphrase, "Passphrase")?;
         if !self.is_argon2id() {
-            return Err(MajikKeyError::msg("Account is on the legacy KDF. Call migrate(passphrase) before add_keys()."));
+            return Err(MajikKeyError::msg(
+                "Account is on the legacy KDF. Call migrate(passphrase) before add_keys().",
+            ));
         }
 
         let resolved = resolve_requested_keys(ids)?;
@@ -693,7 +837,9 @@ impl MajikKey {
         // 2) mnemonic must belong to this account
         let probe = derive_keys(&seed64[..], &[KeyId::X25519])?;
         if fingerprint_from_public_raw(&probe[&KeyId::X25519].public_key) != self.fingerprint {
-            return Err(MajikKeyError::msg("That mnemonic does not belong to this account"));
+            return Err(MajikKeyError::msg(
+                "That mnemonic does not belong to this account",
+            ));
         }
 
         // 3) derive + seal + add
@@ -704,7 +850,11 @@ impl MajikKey {
                 id,
                 public_key: kp.public_key.clone(),
                 encrypted_secret_key: Some(KeyStore::seal(&aes_key, &kp.secret_key)?),
-                secret_key: if unlocked { Some(Zeroizing::new(kp.secret_key.to_vec())) } else { None },
+                secret_key: if unlocked {
+                    Some(Zeroizing::new(kp.secret_key.to_vec()))
+                } else {
+                    None
+                },
                 derivation: algorithm(id).derivation.clone(),
                 created_at: Some(crate::core::utils::now_iso8601()),
             })?;
@@ -728,11 +878,16 @@ impl MajikKey {
 
         let salt = base64_to_array_buffer(&self.salt)?;
         let primary = Self::derive_vault_key(passphrase, &salt, self.kdf_version)?;
-        let argon: Option<Zeroizing<[u8; 32]>> = if !self.is_argon2id() && self.has_non_x25519_blobs() {
-            Some(Self::derive_vault_key(passphrase, &salt, KdfVersion::Argon2id)?)
-        } else {
-            None
-        };
+        let argon: Option<Zeroizing<[u8; 32]>> =
+            if !self.is_argon2id() && self.has_non_x25519_blobs() {
+                Some(Self::derive_vault_key(
+                    passphrase,
+                    &salt,
+                    KdfVersion::Argon2id,
+                )?)
+            } else {
+                None
+            };
         let keys = if self.is_argon2id() {
             VaultKeys::uniform(&primary)
         } else {
@@ -743,9 +898,17 @@ impl MajikKey {
     }
 
     pub fn verify(&self, passphrase: &str) -> bool {
-        let Ok(salt) = base64_to_array_buffer(&self.salt) else { return false };
-        let Ok(key) = Self::derive_vault_key(passphrase, &salt, self.kdf_version) else { return false };
-        match self.store.slot(KeyId::X25519).and_then(|s| s.encrypted_secret_key.as_ref()) {
+        let Ok(salt) = base64_to_array_buffer(&self.salt) else {
+            return false;
+        };
+        let Ok(key) = Self::derive_vault_key(passphrase, &salt, self.kdf_version) else {
+            return false;
+        };
+        match self
+            .store
+            .slot(KeyId::X25519)
+            .and_then(|s| s.encrypted_secret_key.as_ref())
+        {
             Some(blob) => KeyStore::open(&key, blob, "private key").is_ok(),
             None => false,
         }
@@ -753,11 +916,17 @@ impl MajikKey {
 
     /// Runs `operation` against an already-unlocked MajikKey and locks it again when the
     /// operation completes — even if it panics.
-    pub fn with_auto_lock<T>(&mut self, operation: impl FnOnce(&mut MajikKey) -> T) -> MajikKeyResult<T> {
+    pub fn with_auto_lock<T>(
+        &mut self,
+        operation: impl FnOnce(&mut MajikKey) -> T,
+    ) -> MajikKeyResult<T> {
         if self.is_locked() {
-            return Err(MajikKeyError::msg("MajikKey must be unlocked before calling with_auto_lock()"));
+            return Err(MajikKeyError::msg(
+                "MajikKey must be unlocked before calling with_auto_lock()",
+            ));
         }
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| operation(&mut *self)));
+        let result =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| operation(&mut *self)));
         self.lock();
         match result {
             Ok(v) => Ok(v),
@@ -766,25 +935,37 @@ impl MajikKey {
     }
 
     fn has_non_x25519_blobs(&self) -> bool {
-        self.store
-            .ids()
-            .into_iter()
-            .any(|id| id != KeyId::X25519 && self.store.slot(id).is_some_and(|s| s.encrypted_secret_key.is_some()))
+        self.store.ids().into_iter().any(|id| {
+            id != KeyId::X25519
+                && self
+                    .store
+                    .slot(id)
+                    .is_some_and(|s| s.encrypted_secret_key.is_some())
+        })
     }
 
     /// Decrypt every blob under (current passphrase, current salt/KDF), re-encrypt under
     /// (new passphrase, fresh salt, Argon2id), then commit atomically. Doesn't need the
     /// account to be unlocked.
-    fn reencrypt_all(&mut self, current_passphrase: &str, new_passphrase: &str) -> MajikKeyResult<()> {
+    fn reencrypt_all(
+        &mut self,
+        current_passphrase: &str,
+        new_passphrase: &str,
+    ) -> MajikKeyResult<()> {
         let old_salt = base64_to_array_buffer(&self.salt)?;
         let new_salt = generate_random_bytes(SALT_SIZE);
 
         let old_primary = Self::derive_vault_key(current_passphrase, &old_salt, self.kdf_version)?;
-        let old_argon: Option<Zeroizing<[u8; 32]>> = if !self.is_argon2id() && self.has_non_x25519_blobs() {
-            Some(Self::derive_vault_key(current_passphrase, &old_salt, KdfVersion::Argon2id)?)
-        } else {
-            None
-        };
+        let old_argon: Option<Zeroizing<[u8; 32]>> =
+            if !self.is_argon2id() && self.has_non_x25519_blobs() {
+                Some(Self::derive_vault_key(
+                    current_passphrase,
+                    &old_salt,
+                    KdfVersion::Argon2id,
+                )?)
+            } else {
+                None
+            };
         let new_key = Self::derive_vault_key(new_passphrase, &new_salt, KdfVersion::Argon2id)?;
 
         let old_keys = if self.is_argon2id() {
@@ -839,7 +1020,11 @@ impl MajikKey {
 
     pub fn to_json_string(&self, pretty: bool) -> MajikKeyResult<String> {
         let j = self.to_json();
-        Ok(if pretty { serde_json::to_string_pretty(&j)? } else { serde_json::to_string(&j)? })
+        Ok(if pretty {
+            serde_json::to_string_pretty(&j)?
+        } else {
+            serde_json::to_string(&j)?
+        })
     }
 
     // ── UTILITY ──────────────────────────────────────────────────────────────
@@ -848,10 +1033,14 @@ impl MajikKey {
         if strength != 128 && strength != 256 {
             return Err(MajikKeyError::msg("Strength must be 128 or 256"));
         }
-        let entropy = crate::core::crypto::crypto_provider::generate_random_bytes_protected((strength / 8) as usize);
+        let entropy = crate::core::crypto::crypto_provider::generate_random_bytes_protected(
+            (strength / 8) as usize,
+        );
         let m = bip39::Mnemonic::from_entropy_in(language.to_bip39(), &entropy)
             .map_err(|_| MajikKeyError::msg("Failed to generate mnemonic"))?;
-        Ok(m.words().collect::<Vec<_>>().join(language.word_separator()))
+        Ok(m.words()
+            .collect::<Vec<_>>()
+            .join(language.word_separator()))
     }
 
     /// Non-empty check only (same as TS). Use `validate_mnemonic_in` for a wordlist/checksum check.
@@ -876,12 +1065,22 @@ impl MajikKey {
 
     pub fn to_key_identity(&self) -> MajikKeyResult<MajikKeyIdentity> {
         if self.is_locked() {
-            return Err(MajikKeyError::msg("Cannot convert locked MajikKey to KeyIdentity. Unlock first."));
+            return Err(MajikKeyError::msg(
+                "Cannot convert locked MajikKey to KeyIdentity. Unlock first.",
+            ));
         }
-        let blob = self.store.slot(KeyId::X25519).and_then(|s| s.encrypted_secret_key.clone()).unwrap_or_default();
+        let blob = self
+            .store
+            .slot(KeyId::X25519)
+            .and_then(|s| s.encrypted_secret_key.clone())
+            .unwrap_or_default();
         let mut private_key = Zeroizing::new([0u8; 32]);
         private_key.copy_from_slice(self.require_secret(KeyId::X25519, None)?);
-        let peek = |id| self.store.peek_secret_key(id).map(|s| Zeroizing::new(s.to_vec()));
+        let peek = |id| {
+            self.store
+                .peek_secret_key(id)
+                .map(|s| Zeroizing::new(s.to_vec()))
+        };
         let pubk = |id| self.store.get_public_key(id).ok().map(<[u8]>::to_vec);
         Ok(MajikKeyIdentity {
             id: self.id.clone(),
@@ -904,7 +1103,9 @@ impl MajikKey {
 
     pub fn to_serialized_identity(&self) -> MajikKeyResult<SerializedIdentity> {
         if self.is_locked() {
-            return Err(MajikKeyError::msg("Cannot convert locked MajikKey to SerializedIdentity. Unlock first."));
+            return Err(MajikKeyError::msg(
+                "Cannot convert locked MajikKey to SerializedIdentity. Unlock first.",
+            ));
         }
         Ok(SerializedIdentity {
             id: self.id.clone(),
@@ -926,7 +1127,10 @@ impl MajikKey {
     ) -> MajikKeyResult<MajikMessageIdentity> {
         let errors = user.validate();
         if !errors.is_empty() {
-            return Err(MajikKeyError::msg(format!("Invalid MajikUser: {}", errors.join(", "))));
+            return Err(MajikKeyError::msg(format!(
+                "Invalid MajikUser: {}",
+                errors.join(", ")
+            )));
         }
         MajikMessageIdentity::create(user, &self.to_contact(None), options)
     }
@@ -935,7 +1139,9 @@ impl MajikKey {
 
     pub fn export_mnemonic_backup(&self, mnemonic: &str) -> MajikKeyResult<String> {
         if self.is_locked() {
-            return Err(MajikKeyError::msg("MajikKey must be unlocked to export backup"));
+            return Err(MajikKeyError::msg(
+                "MajikKey must be unlocked to export backup",
+            ));
         }
         MajikKeyValidator::validate_mnemonic(mnemonic)?;
         Self::export_mnemonic_backup_inner(
@@ -969,17 +1175,30 @@ impl MajikKey {
 
         let parsed: BackupBlob = serde_json::from_str(&base64_to_utf8(backup)?)
             .map_err(|e| MajikKeyError::with_cause("Invalid backup format", e))?;
-        if parsed.iv.is_empty() || parsed.ciphertext.is_empty() || parsed.public_key.is_empty() || parsed.fingerprint.is_empty() {
+        if parsed.iv.is_empty()
+            || parsed.ciphertext.is_empty()
+            || parsed.public_key.is_empty()
+            || parsed.fingerprint.is_empty()
+        {
             return Err(MajikKeyError::msg("Invalid backup format"));
         }
         let backup_kdf = KdfVersion::from_u8(parsed.backup_kdf_version.unwrap_or(1));
 
         // Verify the mnemonic is correct before the expensive re-derivation.
-        Self::verify_backup_decryption(&parsed.iv, &parsed.ciphertext, mnemonic, backup_kdf, parsed.backup_salt_version)?;
+        Self::verify_backup_decryption(
+            &parsed.iv,
+            &parsed.ciphertext,
+            mnemonic,
+            backup_kdf,
+            parsed.backup_salt_version,
+        )?;
 
         let d = Self::derive_from_mnemonic(mnemonic, language, passphrase, &ids)?;
         Self::new(MajikKeyInit {
-            id: parsed.id.filter(|s| !s.is_empty()).unwrap_or_else(|| d.fingerprint.clone()),
+            id: parsed
+                .id
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| d.fingerprint.clone()),
             fingerprint: d.fingerprint,
             salt: d.salt,
             backup: backup.to_string(),
@@ -1009,7 +1228,9 @@ impl MajikKey {
         let salt = generate_random_bytes(SALT_SIZE);
         let aes_key = Self::derive_vault_key(passphrase, &salt, KdfVersion::Argon2id)?;
         let store = KeyStore::from_derived(&derived, &aes_key)?;
-        let x = derived.get(&KeyId::X25519).ok_or_else(|| MajikKeyError::msg("X25519 key was not derived"))?;
+        let x = derived
+            .get(&KeyId::X25519)
+            .ok_or_else(|| MajikKeyError::msg("X25519 key was not derived"))?;
         Ok(DerivedAccount {
             store,
             salt: array_to_base64(&salt),
@@ -1020,7 +1241,11 @@ impl MajikKey {
     }
 
     /// One KDF run. `Pbkdf2` = legacy (X25519 blob of old accounts only).
-    fn derive_vault_key(passphrase: &str, salt: &[u8], kdf: KdfVersion) -> MajikKeyResult<Zeroizing<[u8; 32]>> {
+    fn derive_vault_key(
+        passphrase: &str,
+        salt: &[u8],
+        kdf: KdfVersion,
+    ) -> MajikKeyResult<Zeroizing<[u8; 32]>> {
         match kdf {
             KdfVersion::Argon2id => derive_key_from_passphrase_argon2(passphrase, salt),
             KdfVersion::Pbkdf2 => Ok(derive_key_from_passphrase(passphrase, salt)),
@@ -1038,12 +1263,17 @@ impl MajikKey {
     ) -> MajikKeyResult<()> {
         let iv = base64_to_array_buffer(iv_b64)?;
         let ct = base64_to_array_buffer(ct_b64)?;
-        let fail = || MajikKeyError::msg("Failed to decrypt backup — invalid mnemonic or corrupted data");
+        let fail =
+            || MajikKeyError::msg("Failed to decrypt backup — invalid mnemonic or corrupted data");
 
         let key = match kdf {
-            KdfVersion::Argon2id => derive_key_from_mnemonic_argon2(mnemonic, backup_salt_for(salt_version).as_bytes())?,
+            KdfVersion::Argon2id => {
+                derive_key_from_mnemonic_argon2(mnemonic, backup_salt_for(salt_version).as_bytes())?
+            }
             // PBKDF2 backups predate salt versioning: always the legacy salt.
-            KdfVersion::Pbkdf2 => derive_key_from_mnemonic(mnemonic, LEGACY_MAJIK_MNEMONIC_SALT.as_bytes()),
+            KdfVersion::Pbkdf2 => {
+                derive_key_from_mnemonic(mnemonic, LEGACY_MAJIK_MNEMONIC_SALT.as_bytes())
+            }
         };
         aes_gcm_decrypt(&key, &iv, &ct).map(|_| ()).ok_or_else(fail)
     }
@@ -1080,19 +1310,28 @@ impl MajikKey {
         }
         let solana = MajikKeySolanaNamespace::new(self.get_solana_keypair_material(None).ok()?);
 
-        let bitcoin = self.get_bitcoin_keypair_material(None).ok().map(MajikKeyBitcoinNamespace::new);
+        let bitcoin = self
+            .get_bitcoin_keypair_material(None)
+            .ok()
+            .map(MajikKeyBitcoinNamespace::new);
         let ethereum = self
             .get_ethereum_keypair_material()
             .ok()
             .and_then(|m| MajikKeyEthereumNamespace::new(m).ok());
 
-        Some(MajikKeyWeb3Namespace { solana, bitcoin, ethereum })
+        Some(MajikKeyWeb3Namespace {
+            solana,
+            bitcoin,
+            ethereum,
+        })
     }
 
     // ── BITCOIN ──
 
     /// @experimental True if this MajikKey can currently produce Bitcoin material (unlocked + has a Bitcoin key).
-    pub fn has_bitcoin_keypair(&self) -> bool { self.store.peek_secret_key(KeyId::Btc).is_some() }
+    pub fn has_bitcoin_keypair(&self) -> bool {
+        self.store.peek_secret_key(KeyId::Btc).is_some()
+    }
 
     /// @experimental Raw material for the stored (domain-separated) key. The REAL BIP-84 key
     /// needs the mnemonic: use [`MajikKey::derive_standard_bitcoin_from_mnemonic`].
@@ -1114,7 +1353,9 @@ impl MajikKey {
         )?;
         let mut private_key = Zeroizing::new([0u8; 32]);
         private_key.copy_from_slice(
-            secret.get(..32).filter(|_| secret.len() == 32)
+            secret
+                .get(..32)
+                .filter(|_| secret.len() == 32)
                 .ok_or_else(|| MajikKeyError::msg("Invalid stored Bitcoin private key"))?,
         );
         let public_key: [u8; 33] = self
@@ -1122,7 +1363,10 @@ impl MajikKey {
             .get_public_key(KeyId::Btc)?
             .try_into()
             .map_err(|_| MajikKeyError::msg("Invalid stored Bitcoin public key"))?;
-        Ok(BitcoinKeypairMaterial { private_key, public_key })
+        Ok(BitcoinKeypairMaterial {
+            private_key,
+            public_key,
+        })
     }
 
     /// @experimental Derive the REAL BIP-84 mainnet keypair straight from a mnemonic.
@@ -1133,23 +1377,36 @@ impl MajikKey {
         MajikKeyValidator::validate_mnemonic(mnemonic)?;
         validate_mnemonic_in(mnemonic, language)?;
         let seed = mnemonic_to_seed(mnemonic, language)?;
-        derive_bitcoin_keypair_from_seed(&seed[..], Some(&BitcoinDerivationOptions { standard: true, path: None }))
+        derive_bitcoin_keypair_from_seed(
+            &seed[..],
+            Some(&BitcoinDerivationOptions {
+                standard: true,
+                path: None,
+            }),
+        )
     }
 
     /// @experimental WIF export of the stored (domain-separated) Bitcoin key.
     pub fn get_bitcoin_wif(&self, compressed: Option<bool>) -> MajikKeyResult<String> {
-        Ok(to_wif(&self.get_bitcoin_keypair_material(None)?, compressed))
+        Ok(to_wif(
+            &self.get_bitcoin_keypair_material(None)?,
+            compressed,
+        ))
     }
 
     // ── ETHEREUM ──
 
     /// @experimental True if this account has a stored Ethereum key (works while locked).
-    pub fn has_ethereum(&self) -> bool { self.store.has(KeyId::Eth) }
+    pub fn has_ethereum(&self) -> bool {
+        self.store.has(KeyId::Eth)
+    }
 
     /// @experimental EIP-55 address (standard `m/44'/60'/0'/0/0`). Public-only, works while locked.
     pub fn get_ethereum_address(&self) -> MajikKeyResult<String> {
         if !self.store.has(KeyId::Eth) {
-            return Err(MajikKeyError::msg("No Ethereum key — add it with add_keys(&[KeyId::Eth], mnemonic, passphrase)."));
+            return Err(MajikKeyError::msg(
+                "No Ethereum key — add it with add_keys(&[KeyId::Eth], mnemonic, passphrase).",
+            ));
         }
         ethereum_address_from_public_key(self.store.get_public_key(KeyId::Eth)?)
     }
@@ -1159,21 +1416,30 @@ impl MajikKey {
         let secret = self.require_secret(KeyId::Eth, None)?;
         let mut private_key = Zeroizing::new([0u8; 32]);
         private_key.copy_from_slice(
-            secret.get(..32).filter(|_| secret.len() == 32)
+            secret
+                .get(..32)
+                .filter(|_| secret.len() == 32)
                 .ok_or_else(|| MajikKeyError::msg("Invalid stored Ethereum private key"))?,
         );
-        Ok(EthereumKeypairMaterial { private_key, public_key: self.store.get_public_key(KeyId::Eth)?.to_vec() })
+        Ok(EthereumKeypairMaterial {
+            private_key,
+            public_key: self.store.get_public_key(KeyId::Eth)?.to_vec(),
+        })
     }
 
     /// @experimental 0x-prefixed private key hex, for wallet "import private key".
     pub fn get_ethereum_private_key_hex(&self) -> MajikKeyResult<String> {
-        Ok(to_ethereum_private_key_hex(&self.get_ethereum_keypair_material()?))
+        Ok(to_ethereum_private_key_hex(
+            &self.get_ethereum_keypair_material()?,
+        ))
     }
 
     // ── SOLANA ──
 
     /// @experimental True if this MajikKey can currently produce a Solana keypair (unlocked + has Ed25519).
-    pub fn has_solana_keypair(&self) -> bool { self.store.peek_secret_key(KeyId::Ed25519).is_some() }
+    pub fn has_solana_keypair(&self) -> bool {
+        self.store.peek_secret_key(KeyId::Ed25519).is_some()
+    }
 
     /// @experimental Raw Solana keypair material. Derived on demand (cheap: one SHA-256 and a
     /// scalar mult), so nothing extra is cached — or needs wiping — beyond what the caller holds.
@@ -1193,8 +1459,13 @@ impl MajikKey {
     }
 
     /// @experimental Base58 Solana address.
-    pub fn get_solana_address(&self, options: Option<&SolanaDerivationOptions>) -> MajikKeyResult<String> {
-        Ok(solana_address_from_public_key(&self.get_solana_keypair_material(options)?.public_key))
+    pub fn get_solana_address(
+        &self,
+        options: Option<&SolanaDerivationOptions>,
+    ) -> MajikKeyResult<String> {
+        Ok(solana_address_from_public_key(
+            &self.get_solana_keypair_material(options)?.public_key,
+        ))
     }
 }
 

@@ -140,10 +140,15 @@ pub fn aes_gcm_encrypt(key: &[u8; 32], iv: &[u8], plaintext: &[u8]) -> MajikKeyR
     }
     let cipher = Aes256Gcm::new_from_slice(key)
         .map_err(|e| MajikKeyError::crypto(format!("Invalid AES key: {e}")))?;
-    let nonce =
-        Nonce::try_from(iv).map_err(|_| MajikKeyError::crypto("Invalid AES-GCM nonce"))?;
+    let nonce = Nonce::try_from(iv).map_err(|_| MajikKeyError::crypto("Invalid AES-GCM nonce"))?;
     cipher
-        .encrypt(&nonce, Payload { msg: plaintext, aad: &[] })
+        .encrypt(
+            &nonce,
+            Payload {
+                msg: plaintext,
+                aad: &[],
+            },
+        )
         .map_err(|_| MajikKeyError::crypto("AES-GCM encryption failed"))
 }
 
@@ -156,14 +161,24 @@ pub fn aes_gcm_decrypt(key: &[u8; 32], iv: &[u8], ciphertext: &[u8]) -> Option<Z
     let cipher = Aes256Gcm::new_from_slice(key).ok()?;
     let nonce = Nonce::try_from(iv).ok()?;
     cipher
-        .decrypt(&nonce, Payload { msg: ciphertext, aad: &[] })
+        .decrypt(
+            &nonce,
+            Payload {
+                msg: ciphertext,
+                aad: &[],
+            },
+        )
         .ok()
         .map(Zeroizing::new)
 }
 
 // ─── KDF v2: Argon2id (current) ─────────────────────────────────────────────
 
-fn argon2id(input: &[u8], salt: &[u8], params: &Argon2Params) -> MajikKeyResult<Zeroizing<[u8; 32]>> {
+fn argon2id(
+    input: &[u8],
+    salt: &[u8],
+    params: &Argon2Params,
+) -> MajikKeyResult<Zeroizing<[u8; 32]>> {
     debug_assert_eq!(params.output_len, 32);
     let argon2_params = Params::new(
         params.mem_cost_kib,
@@ -241,11 +256,16 @@ pub fn generate_ml_kem_keypair() -> MlKemKeypair {
     let mut expanded = dk.to_expanded_bytes();
     let secret_key = Zeroizing::new(expanded.to_vec());
     expanded.as_mut_slice().zeroize();
-    MlKemKeypair { public_key: ek.to_bytes().to_vec(), secret_key }
+    MlKemKeypair {
+        public_key: ek.to_bytes().to_vec(),
+        secret_key,
+    }
 }
 
 /// ML-KEM encapsulation → `(shared_secret[32], ciphertext[1088])`.
-pub fn ml_kem_encapsulate(recipient_public_key: &[u8]) -> MajikKeyResult<(Zeroizing<[u8; 32]>, Vec<u8>)> {
+pub fn ml_kem_encapsulate(
+    recipient_public_key: &[u8],
+) -> MajikKeyResult<(Zeroizing<[u8; 32]>, Vec<u8>)> {
     let ek = ml_kem_encapsulation_key(recipient_public_key)?;
     let (ct, ss) = ek.encapsulate();
     let mut shared = Zeroizing::new([0u8; 32]);
@@ -274,12 +294,14 @@ fn ml_kem_encapsulation_key(public_key: &[u8]) -> MajikKeyResult<EncapsulationKe
         .map_err(|_| MajikKeyError::crypto("Invalid ML-KEM-768 public key"))
 }
 
-
 // ─── BIP-39 ─────────────────────────────────────────────────────────────────
 
 /// Parse + validate `mnemonic` against `language`'s wordlist and checksum.
 /// (TS: `validateMnemonic(mnemonic, wordlist)`.) Whitespace-tolerant and NFKD-normalizing.
-pub fn validate_mnemonic_in(mnemonic: &str, language: crate::core::crypto::wordlist::MnemonicLanguage) -> MajikKeyResult<()> {
+pub fn validate_mnemonic_in(
+    mnemonic: &str,
+    language: crate::core::crypto::wordlist::MnemonicLanguage,
+) -> MajikKeyResult<()> {
     bip39::Mnemonic::parse_in(language.to_bip39(), mnemonic)
         .map(|_| ())
         .map_err(|_| MajikKeyError::InvalidMnemonic)

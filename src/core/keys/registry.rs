@@ -7,7 +7,9 @@ use serde_json::Map;
 
 use crate::core::error::{MajikKeyError, MajikKeyResult};
 use crate::core::keys::key_id::{key_family_of, KeyFamily, KeyId, CORE_KEYS};
-use crate::core::keys::types::{KeyAlgorithmDefinition, KeyDerivation, KeyKind, KeyPurpose, KeyStatus};
+use crate::core::keys::types::{
+    KeyAlgorithmDefinition, KeyDerivation, KeyKind, KeyPurpose, KeyStatus,
+};
 
 fn hkdf(id: KeyId) -> KeyDerivation {
     KeyDerivation {
@@ -51,7 +53,13 @@ struct Opts {
     note: Option<&'static str>,
 }
 
-fn def(id: KeyId, purpose: KeyPurpose, standard: &str, derivation: KeyDerivation, o: Opts) -> KeyAlgorithmDefinition {
+fn def(
+    id: KeyId,
+    purpose: KeyPurpose,
+    standard: &str,
+    derivation: KeyDerivation,
+    o: Opts,
+) -> KeyAlgorithmDefinition {
     KeyAlgorithmDefinition {
         id,
         family: key_family_of(id),
@@ -67,19 +75,33 @@ fn def(id: KeyId, purpose: KeyPurpose, standard: &str, derivation: KeyDerivation
 }
 
 fn implemented() -> Opts {
-    Opts { implemented: true, ..Opts::default() }
+    Opts {
+        implemented: true,
+        ..Opts::default()
+    }
 }
 
 fn slh(id: KeyId, variant: &str) -> KeyAlgorithmDefinition {
-    def(id, KeyPurpose::Signature, &format!("FIPS 205 ({variant})"), hkdf(id), implemented())
+    def(
+        id,
+        KeyPurpose::Signature,
+        &format!("FIPS 205 ({variant})"),
+        hkdf(id),
+        implemented(),
+    )
 }
 
-pub static KEY_ALGORITHMS: LazyLock<BTreeMap<KeyId, KeyAlgorithmDefinition>> = LazyLock::new(|| {
-    use KeyId::*;
-    use KeyPurpose::*;
-    let reserved = |note: &'static str| Opts { status: Some(KeyStatus::Reserved), note: Some(note), ..Opts::default() };
+pub static KEY_ALGORITHMS: LazyLock<BTreeMap<KeyId, KeyAlgorithmDefinition>> = LazyLock::new(
+    || {
+        use KeyId::*;
+        use KeyPurpose::*;
+        let reserved = |note: &'static str| Opts {
+            status: Some(KeyStatus::Reserved),
+            note: Some(note),
+            ..Opts::default()
+        };
 
-    let defs = vec![
+        let defs = vec![
         // ── classic ── (legacy recipes are frozen)
         def(X25519, KeyAgreement, "RFC 7748",
             KeyDerivation { scheme: "ed2curve".into(), version: 1, info: None, path: None,
@@ -135,12 +157,15 @@ pub static KEY_ALGORITHMS: LazyLock<BTreeMap<KeyId, KeyAlgorithmDefinition>> = L
                 note: Some("sha256(edSeed || \"MajikKeySolanaSeed\")".into()), extra: Map::new() },
             Opts { kind: Some(KeyKind::Derived), derived_from: Some(Ed25519), implemented: true, ..Opts::default() }),
     ];
-    defs.into_iter().map(|d| (d.id, d)).collect()
-});
+        defs.into_iter().map(|d| (d.id, d)).collect()
+    },
+);
 
 /// The registry entry for `id`.
 pub fn algorithm(id: KeyId) -> &'static KeyAlgorithmDefinition {
-    KEY_ALGORITHMS.get(&id).expect("every KeyId has a registry entry")
+    KEY_ALGORITHMS
+        .get(&id)
+        .expect("every KeyId has a registry entry")
 }
 
 /// Look up by wire string; `None` for ids this version doesn't know.
@@ -150,7 +175,11 @@ pub fn get_algorithm(id: &str) -> Option<&'static KeyAlgorithmDefinition> {
 
 /// Everything the registry knows, in canonical order (includes reserved/unsupported).
 pub fn known_key_ids(family: Option<KeyFamily>) -> Vec<KeyId> {
-    KeyId::ALL.iter().copied().filter(|id| family.map_or(true, |f| key_family_of(*id) == f)).collect()
+    KeyId::ALL
+        .iter()
+        .copied()
+        .filter(|id| family.map_or(true, |f| key_family_of(*id) == f))
+        .collect()
 }
 
 /// Ids that can actually be enabled today.
@@ -206,6 +235,9 @@ pub fn resolve_requested_keys(requested: &[KeyId]) -> MajikKeyResult<Vec<KeyId>>
 
 /// Same as [`resolve_requested_keys`] but for wire strings (rejects unknown ids).
 pub fn resolve_requested_key_strs(requested: &[&str]) -> MajikKeyResult<Vec<KeyId>> {
-    let ids = requested.iter().map(|s| s.parse::<KeyId>()).collect::<MajikKeyResult<Vec<_>>>()?;
+    let ids = requested
+        .iter()
+        .map(|s| s.parse::<KeyId>())
+        .collect::<MajikKeyResult<Vec<_>>>()?;
     resolve_requested_keys(&ids)
 }

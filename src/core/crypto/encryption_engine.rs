@@ -15,8 +15,8 @@ use crate::core::error::{MajikKeyError, MajikKeyResult};
 use crate::core::keys::key_id::KeyId;
 use crate::core::keys::key_impls::derive_keys;
 use crate::core::types::{
-    ED25519RawPublicKey, MLDSA87RawPublicKey, MLKEM768RawPublicKey, MajikKeyFingerprint, SecretBytes,
-    X25519RawKey,
+    ED25519RawPublicKey, MLDSA87RawPublicKey, MLKEM768RawPublicKey, MajikKeyFingerprint,
+    SecretBytes, X25519RawKey,
 };
 
 /// The core four, derived from one mnemonic.
@@ -53,12 +53,18 @@ impl EncryptionEngine {
         let seed64 = mnemonic_to_seed(mnemonic, language)?;
         let k = derive_keys(
             &seed64[..],
-            &[KeyId::X25519, KeyId::Ed25519, KeyId::MlKem768, KeyId::MlDsa87],
+            &[
+                KeyId::X25519,
+                KeyId::Ed25519,
+                KeyId::MlKem768,
+                KeyId::MlDsa87,
+            ],
         )
         .map_err(|e| MajikKeyError::with_cause("Failed to derive identity from mnemonic", e))?;
 
         let arr32 = |v: &[u8]| -> MajikKeyResult<[u8; 32]> {
-            v.try_into().map_err(|_| MajikKeyError::crypto("unexpected key length"))
+            v.try_into()
+                .map_err(|_| MajikKeyError::crypto("unexpected key length"))
         };
         let x = &k[&KeyId::X25519];
         let ed = &k[&KeyId::Ed25519];
@@ -71,7 +77,9 @@ impl EncryptionEngine {
         ed64.copy_from_slice(&ed.secret_key);
 
         Ok(EncryptionIdentity {
-            public_key: X25519RawKey { raw: arr32(&x.public_key)? },
+            public_key: X25519RawKey {
+                raw: arr32(&x.public_key)?,
+            },
             private_key: priv32,
             fingerprint: fingerprint_from_public_raw(&x.public_key),
             ml_kem_public_key: kem.public_key.clone(),

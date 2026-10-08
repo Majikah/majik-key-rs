@@ -22,6 +22,7 @@ pub use crate::core::backup::{
 pub use crate::core::crypto::constants::*;
 pub use crate::core::crypto::crypto_provider::*;
 pub use crate::core::crypto::wordlist::*;
+pub use crate::core::database::system::identity::*;
 pub use crate::core::error::*;
 pub use crate::core::keys::hkdf_recipe::*;
 pub use crate::core::keys::key_id::*;
@@ -33,9 +34,16 @@ pub use crate::core::keys::types::*;
 pub use crate::core::types::*;
 pub use crate::core::validator::*;
 pub use crate::core::web3::{
-    bitcoin::bitcoin::*, bitcoin::constants::*, bitcoin::types::*, ethereum::constants::*,
-    ethereum::ethereum::*, ethereum::types::*, solana::constants::*, solana::solana::*,
-    solana::types::*, types::MajikKeyWeb3Namespace, utils::{base58_encode, base58check_encode},
+    bitcoin::bitcoin::*,
+    bitcoin::constants::*,
+    bitcoin::types::*,
+    ethereum::constants::*,
+    ethereum::ethereum::*,
+    ethereum::types::*,
+    solana::constants::*,
+    solana::solana::*,
+    solana::types::*,
+    types::MajikKeyWeb3Namespace,
+    utils::{base58_encode, base58check_encode},
 };
-pub use crate::core::database::system::identity::*;
 pub use crate::majik_key::*;

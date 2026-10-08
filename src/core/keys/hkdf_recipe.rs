@@ -22,7 +22,11 @@ pub fn hkdf_info(id: KeyId) -> String {
     format!("majik/v1/{}", id.as_str())
 }
 
-pub fn derive_seed_hkdf(seed64: &[u8], id: KeyId, length: usize) -> MajikKeyResult<Zeroizing<Vec<u8>>> {
+pub fn derive_seed_hkdf(
+    seed64: &[u8],
+    id: KeyId,
+    length: usize,
+) -> MajikKeyResult<Zeroizing<Vec<u8>>> {
     if seed64.len() != 64 {
         return Err(MajikKeyError::msg(format!(
             "Expected the 64-byte BIP-39 seed, got {} bytes",

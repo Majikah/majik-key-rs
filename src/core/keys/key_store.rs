@@ -17,7 +17,9 @@ use std::collections::BTreeMap;
 
 use zeroize::Zeroizing;
 
-use crate::core::crypto::crypto_provider::{aes_gcm_decrypt, aes_gcm_encrypt, generate_random_bytes, IV_LENGTH};
+use crate::core::crypto::crypto_provider::{
+    aes_gcm_decrypt, aes_gcm_encrypt, generate_random_bytes, IV_LENGTH,
+};
 use crate::core::error::{MajikKeyError, MajikKeyResult};
 use crate::core::keys::key_id::KeyId;
 use crate::core::keys::key_impls::DerivedKeypair;
@@ -48,7 +50,10 @@ pub struct VaultKeys<'a> {
 impl<'a> VaultKeys<'a> {
     /// One key for everything (Argon2id accounts).
     pub fn uniform(key: &'a [u8; 32]) -> Self {
-        Self { x25519: key, rest: Some(key) }
+        Self {
+            x25519: key,
+            rest: Some(key),
+        }
     }
     /// Legacy accounts: `x25519` for `classic:x25519`, `rest` (if any non-X25519 blob exists) for the others.
     pub fn split(x25519: &'a [u8; 32], rest: Option<&'a [u8; 32]>) -> Self {
@@ -98,29 +103,65 @@ impl LegacyKeyJson {
     /// `(public, encrypted)` for one of the five pre-registry keys.
     fn pair(&self, id: KeyId) -> (Option<&String>, Option<&String>) {
         match id {
-            KeyId::X25519 => ((!self.public_key.is_empty()).then_some(&self.public_key), self.encrypted_private_key.as_ref()),
-            KeyId::MlKem768 => (self.ml_kem_public_key.as_ref(), self.encrypted_ml_kem_secret_key.as_ref()),
-            KeyId::Ed25519 => (self.ed_public_key.as_ref(), self.encrypted_ed_secret_key.as_ref()),
-            KeyId::MlDsa87 => (self.ml_dsa_public_key.as_ref(), self.encrypted_ml_dsa_secret_key.as_ref()),
-            KeyId::Btc => (self.btc_public_key.as_ref(), self.encrypted_btc_secret_key.as_ref()),
+            KeyId::X25519 => (
+                (!self.public_key.is_empty()).then_some(&self.public_key),
+                self.encrypted_private_key.as_ref(),
+            ),
+            KeyId::MlKem768 => (
+                self.ml_kem_public_key.as_ref(),
+                self.encrypted_ml_kem_secret_key.as_ref(),
+            ),
+            KeyId::Ed25519 => (
+                self.ed_public_key.as_ref(),
+                self.encrypted_ed_secret_key.as_ref(),
+            ),
+            KeyId::MlDsa87 => (
+                self.ml_dsa_public_key.as_ref(),
+                self.encrypted_ml_dsa_secret_key.as_ref(),
+            ),
+            KeyId::Btc => (
+                self.btc_public_key.as_ref(),
+                self.encrypted_btc_secret_key.as_ref(),
+            ),
             _ => (None, None),
         }
     }
 
     fn set(&mut self, id: KeyId, public: String, encrypted: Option<String>) {
         match id {
-            KeyId::X25519 => { self.public_key = public; self.encrypted_private_key = encrypted; }
-            KeyId::MlKem768 => { self.ml_kem_public_key = Some(public); self.encrypted_ml_kem_secret_key = encrypted; }
-            KeyId::Ed25519 => { self.ed_public_key = Some(public); self.encrypted_ed_secret_key = encrypted; }
-            KeyId::MlDsa87 => { self.ml_dsa_public_key = Some(public); self.encrypted_ml_dsa_secret_key = encrypted; }
-            KeyId::Btc => { self.btc_public_key = Some(public); self.encrypted_btc_secret_key = encrypted; }
+            KeyId::X25519 => {
+                self.public_key = public;
+                self.encrypted_private_key = encrypted;
+            }
+            KeyId::MlKem768 => {
+                self.ml_kem_public_key = Some(public);
+                self.encrypted_ml_kem_secret_key = encrypted;
+            }
+            KeyId::Ed25519 => {
+                self.ed_public_key = Some(public);
+                self.encrypted_ed_secret_key = encrypted;
+            }
+            KeyId::MlDsa87 => {
+                self.ml_dsa_public_key = Some(public);
+                self.encrypted_ml_dsa_secret_key = encrypted;
+            }
+            KeyId::Btc => {
+                self.btc_public_key = Some(public);
+                self.encrypted_btc_secret_key = encrypted;
+            }
             _ => {}
         }
     }
 }
 
 /// Canonical order of the five pre-registry keys (matches TS `LEGACY_FIELDS`).
-const LEGACY_IDS: [KeyId; 5] = [KeyId::X25519, KeyId::MlKem768, KeyId::Ed25519, KeyId::MlDsa87, KeyId::Btc];
+const LEGACY_IDS: [KeyId; 5] = [
+    KeyId::X25519,
+    KeyId::MlKem768,
+    KeyId::Ed25519,
+    KeyId::MlDsa87,
+    KeyId::Btc,
+];
 
 #[derive(Default)]
 pub struct KeyStore {
@@ -147,7 +188,8 @@ impl KeyStore {
             return Err(MajikKeyError::DecryptionFailed(label.to_string()));
         }
         let (iv, ct) = blob.split_at(IV_LENGTH);
-        aes_gcm_decrypt(aes_key, iv, ct).ok_or_else(|| MajikKeyError::DecryptionFailed(label.to_string()))
+        aes_gcm_decrypt(aes_key, iv, ct)
+            .ok_or_else(|| MajikKeyError::DecryptionFailed(label.to_string()))
     }
 
     // ── construction ─────────────────────────────────────────────────────────
@@ -184,7 +226,10 @@ impl KeyStore {
                 return Err(MajikKeyError::msg("Invalid key entry in `keys`"));
             }
             if !seen.insert(e.id.clone()) {
-                return Err(MajikKeyError::msg(format!("Duplicate key entry \"{}\"", e.id)));
+                return Err(MajikKeyError::msg(format!(
+                    "Duplicate key entry \"{}\"",
+                    e.id
+                )));
             }
             let Some(id) = KeyId::parse(&e.id) else {
                 store.opaque.push(e.clone()); // from a newer version: keep, don't interpret
@@ -195,7 +240,11 @@ impl KeyStore {
                 KeySlot {
                     id,
                     public_key: base64_to_uint8array(&e.public_key)?,
-                    encrypted_secret_key: e.encrypted_secret_key.as_deref().map(base64_to_uint8array).transpose()?,
+                    encrypted_secret_key: e
+                        .encrypted_secret_key
+                        .as_deref()
+                        .map(base64_to_uint8array)
+                        .transpose()?,
                     secret_key: None,
                     derivation: e.derivation.clone(),
                     created_at: e.created_at.clone(),
@@ -224,7 +273,9 @@ impl KeyStore {
             );
         }
         if !store.slots.contains_key(&KeyId::X25519) {
-            return Err(MajikKeyError::msg("Legacy key JSON is missing the X25519 public key"));
+            return Err(MajikKeyError::msg(
+                "Legacy key JSON is missing the X25519 public key",
+            ));
         }
         Ok(store)
     }
@@ -245,7 +296,10 @@ impl KeyStore {
     }
     /// Stored ids in canonical registry order.
     pub fn ids(&self) -> Vec<KeyId> {
-        known_key_ids(None).into_iter().filter(|id| self.slots.contains_key(id)).collect()
+        known_key_ids(None)
+            .into_iter()
+            .filter(|id| self.slots.contains_key(id))
+            .collect()
     }
     pub fn has_opaque_secrets(&self) -> bool {
         self.opaque.iter().any(|e| e.encrypted_secret_key.is_some())
@@ -262,7 +316,10 @@ impl KeyStore {
     }
 
     pub fn get_secret_key(&self, id: KeyId) -> MajikKeyResult<&[u8]> {
-        let s = self.slots.get(&id).ok_or_else(|| MajikKeyError::KeyNotFound(id.to_string()))?;
+        let s = self
+            .slots
+            .get(&id)
+            .ok_or_else(|| MajikKeyError::KeyNotFound(id.to_string()))?;
         match (&s.secret_key, self.unlocked) {
             (Some(sk), true) => Ok(sk.as_slice()),
             _ => Err(MajikKeyError::Locked),
@@ -274,7 +331,11 @@ impl KeyStore {
         if !self.unlocked {
             return None;
         }
-        self.slots.get(&id)?.secret_key.as_deref().map(|v| v.as_slice())
+        self.slots
+            .get(&id)?
+            .secret_key
+            .as_deref()
+            .map(|v| v.as_slice())
     }
 
     /// Install raw secrets onto existing slots and mark the store unlocked
@@ -282,7 +343,9 @@ impl KeyStore {
     pub fn attach_secrets(&mut self, secrets: BTreeMap<KeyId, SecretBytes>) -> MajikKeyResult<()> {
         for id in secrets.keys() {
             if !self.slots.contains_key(id) {
-                return Err(MajikKeyError::msg(format!("Secret supplied for unknown key \"{id}\"")));
+                return Err(MajikKeyError::msg(format!(
+                    "Secret supplied for unknown key \"{id}\""
+                )));
             }
         }
         for (id, secret) in secrets {
@@ -300,7 +363,13 @@ impl KeyStore {
         Ok(self
             .ids()
             .into_iter()
-            .filter_map(|id| self.slots.get(&id)?.secret_key.as_ref().map(|s| (id, s.as_slice())))
+            .filter_map(|id| {
+                self.slots
+                    .get(&id)?
+                    .secret_key
+                    .as_ref()
+                    .map(|s| (id, s.as_slice()))
+            })
             .collect())
     }
 
@@ -311,8 +380,14 @@ impl KeyStore {
     pub fn unlock(&mut self, keys: &VaultKeys<'_>) -> MajikKeyResult<()> {
         let mut staged: Vec<(KeyId, SecretBytes)> = Vec::new();
         for slot in self.slots.values() {
-            let Some(blob) = &slot.encrypted_secret_key else { continue };
-            let plain = Self::open(keys.key_for(slot.id)?, blob, &format!("{} secret key", slot.id))?;
+            let Some(blob) = &slot.encrypted_secret_key else {
+                continue;
+            };
+            let plain = Self::open(
+                keys.key_for(slot.id)?,
+                blob,
+                &format!("{} secret key", slot.id),
+            )?;
             staged.push((slot.id, plain));
         }
         for (id, secret) in staged {
@@ -344,8 +419,14 @@ impl KeyStore {
         }
         let mut out = BTreeMap::new();
         for slot in self.slots.values() {
-            let Some(blob) = &slot.encrypted_secret_key else { continue };
-            let plain = Self::open(old.key_for(slot.id)?, blob, &format!("{} secret key", slot.id))?;
+            let Some(blob) = &slot.encrypted_secret_key else {
+                continue;
+            };
+            let plain = Self::open(
+                old.key_for(slot.id)?,
+                blob,
+                &format!("{} secret key", slot.id),
+            )?;
             out.insert(slot.id, Self::seal(new_key, &plain)?);
         }
         Ok(out)
@@ -362,7 +443,10 @@ impl KeyStore {
     /// Add keys after the fact (`add_keys()`). Caller has already sealed `secret_key`.
     pub fn add(&mut self, slot: KeySlot) -> MajikKeyResult<()> {
         if self.slots.contains_key(&slot.id) {
-            return Err(MajikKeyError::msg(format!("\"{}\" already exists on this account", slot.id)));
+            return Err(MajikKeyError::msg(format!(
+                "\"{}\" already exists on this account",
+                slot.id
+            )));
         }
         self.slots.insert(slot.id, slot);
         Ok(())
@@ -395,7 +479,11 @@ impl KeyStore {
         let mut out = LegacyKeyJson::default();
         for id in LEGACY_IDS {
             if let Some(s) = self.slots.get(&id) {
-                out.set(id, array_to_base64(&s.public_key), s.encrypted_secret_key.as_deref().map(array_to_base64));
+                out.set(
+                    id,
+                    array_to_base64(&s.public_key),
+                    s.encrypted_secret_key.as_deref().map(array_to_base64),
+                );
             }
         }
         out

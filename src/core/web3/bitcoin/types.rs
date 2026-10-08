@@ -1,6 +1,7 @@
 use crate::core::error::MajikKeyResult;
 use crate::core::web3::bitcoin::bitcoin::{
-    sign_with_bitcoin_material, to_bitcoin_address, to_wif, BitcoinKeypairMaterial, BitcoinSignatureScheme,
+    sign_with_bitcoin_material, to_bitcoin_address, to_wif, BitcoinKeypairMaterial,
+    BitcoinSignatureScheme,
 };
 
 /// @experimental By default this is Majik's DOMAIN-SEPARATED Bitcoin key
@@ -31,7 +32,11 @@ impl MajikKeyBitcoinNamespace {
         to_wif(&self.material, compressed)
     }
     /// Sign a 32-byte message hash. ECDSA (default) or Schnorr.
-    pub fn sign(&self, message_hash: &[u8], scheme: BitcoinSignatureScheme) -> MajikKeyResult<Vec<u8>> {
+    pub fn sign(
+        &self,
+        message_hash: &[u8],
+        scheme: BitcoinSignatureScheme,
+    ) -> MajikKeyResult<Vec<u8>> {
         sign_with_bitcoin_material(&self.material, message_hash, scheme)
     }
 }

@@ -35,10 +35,18 @@ pub fn looks_like_zip(bytes: &[u8]) -> bool {
 pub fn to_safe_file_name(value: &str) -> String {
     let replaced: String = value
         .chars()
-        .map(|c| if "<>:\"/\\|?*".contains(c) || (c as u32) < 0x20 { '-' } else { c })
+        .map(|c| {
+            if "<>:\"/\\|?*".contains(c) || (c as u32) < 0x20 {
+                '-'
+            } else {
+                c
+            }
+        })
         .collect();
     let collapsed = replaced.split_whitespace().collect::<Vec<_>>().join(" ");
-    collapsed.trim_end_matches(|c| c == '.' || c == ' ').to_string()
+    collapsed
+        .trim_end_matches(|c| c == '.' || c == ' ')
+        .to_string()
 }
 
 /// Static body of the backup README — update copy here, every zip picks it up.
@@ -46,5 +54,8 @@ pub const README_TEXT: &str = "Majik Key Backup\r\n\r\nIMPORTANT: Keep this file
 
 /// `README_TEXT` plus a creation timestamp line — the only per-backup variable part.
 pub fn build_readme_text(created_at: jiff::Timestamp) -> String {
-    format!("{README_TEXT}\n\nBackup created on: {}\n", format_iso8601(created_at))
+    format!(
+        "{README_TEXT}\n\nBackup created on: {}\n",
+        format_iso8601(created_at)
+    )
 }

@@ -110,7 +110,12 @@ key_ids! {
 }
 
 /// Keys every account must hold from this version on (backward-compat baseline).
-pub const CORE_KEYS: [KeyId; 4] = [KeyId::X25519, KeyId::Ed25519, KeyId::MlKem768, KeyId::MlDsa87];
+pub const CORE_KEYS: [KeyId; 4] = [
+    KeyId::X25519,
+    KeyId::Ed25519,
+    KeyId::MlKem768,
+    KeyId::MlDsa87,
+];
 
 impl KeyId {
     pub fn family(&self) -> KeyFamily {
@@ -148,6 +153,7 @@ impl Serialize for KeyId {
 impl<'de> Deserialize<'de> for KeyId {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        KeyId::parse(&s).ok_or_else(|| serde::de::Error::custom(format!("Unknown key algorithm \"{s}\"")))
+        KeyId::parse(&s)
+            .ok_or_else(|| serde::de::Error::custom(format!("Unknown key algorithm \"{s}\"")))
     }
 }

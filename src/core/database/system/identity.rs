@@ -90,19 +90,31 @@ fn phash(user_id: &str, public_key: &str, id: &str, ml_key: &str) -> String {
 impl MajikMessageIdentity {
     fn new(p: MajikMessageIdentityJson) -> MajikKeyResult<Self> {
         for (v, f) in [
-            (&p.id, "id"), (&p.user_id, "user_id"), (&p.public_key, "public_key"),
-            (&p.ml_key, "ml_key"), (&p.phash, "phash"), (&p.label, "label"),
+            (&p.id, "id"),
+            (&p.user_id, "user_id"),
+            (&p.public_key, "public_key"),
+            (&p.ml_key, "ml_key"),
+            (&p.phash, "phash"),
+            (&p.label, "label"),
         ] {
             if v.trim().is_empty() {
-                return Err(MajikKeyError::msg(format!("{f} must be a non-empty string")));
+                return Err(MajikKeyError::msg(format!(
+                    "{f} must be a non-empty string"
+                )));
             }
         }
         p.timestamp
             .parse::<jiff::Timestamp>()
             .map_err(|_| MajikKeyError::msg("timestamp must be a valid ISO timestamp"))?;
         let me = Self {
-            id: p.id, user_id: p.user_id, public_key: p.public_key, ml_key: p.ml_key,
-            phash: p.phash, label: p.label, timestamp: p.timestamp, restricted: p.restricted,
+            id: p.id,
+            user_id: p.user_id,
+            public_key: p.public_key,
+            ml_key: p.ml_key,
+            phash: p.phash,
+            label: p.label,
+            timestamp: p.timestamp,
+            restricted: p.restricted,
         };
         if !me.validate_integrity() {
             return Err(MajikKeyError::msg("Identity integrity validation failed"));
@@ -118,7 +130,10 @@ impl MajikMessageIdentity {
     ) -> MajikKeyResult<Self> {
         let errors = user.validate();
         if !errors.is_empty() {
-            return Err(MajikKeyError::msg(format!("Invalid MajikUser: {}", errors.join(", "))));
+            return Err(MajikKeyError::msg(format!(
+                "Invalid MajikUser: {}",
+                errors.join(", ")
+            )));
         }
         let opts = options.unwrap_or_default();
         let label = opts
@@ -132,21 +147,42 @@ impl MajikMessageIdentity {
             user_id: user.id.clone(),
             public_key: account.public_key_base64.clone(),
             ml_key: account.ml_key.clone(),
-            phash: phash(&user.id, &account.public_key_base64, &account.id, &account.ml_key),
+            phash: phash(
+                &user.id,
+                &account.public_key_base64,
+                &account.id,
+                &account.ml_key,
+            ),
             label,
             timestamp: now_iso8601(),
             restricted: opts.restricted,
         })
     }
 
-    pub fn id(&self) -> &str { &self.id }
-    pub fn user_id(&self) -> &str { &self.user_id }
-    pub fn public_key(&self) -> &str { &self.public_key }
-    pub fn phash(&self) -> &str { &self.phash }
-    pub fn label(&self) -> &str { &self.label }
-    pub fn timestamp(&self) -> &str { &self.timestamp }
-    pub fn restricted(&self) -> bool { self.restricted }
-    pub fn is_restricted(&self) -> bool { self.restricted }
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+    pub fn user_id(&self) -> &str {
+        &self.user_id
+    }
+    pub fn public_key(&self) -> &str {
+        &self.public_key
+    }
+    pub fn phash(&self) -> &str {
+        &self.phash
+    }
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+    pub fn timestamp(&self) -> &str {
+        &self.timestamp
+    }
+    pub fn restricted(&self) -> bool {
+        self.restricted
+    }
+    pub fn is_restricted(&self) -> bool {
+        self.restricted
+    }
 
     /// The only mutable field.
     pub fn set_label(&mut self, label: &str) -> MajikKeyResult<()> {
@@ -164,16 +200,23 @@ impl MajikMessageIdentity {
 
     pub fn matches(&self, user_id: &str, public_key: &str) -> MajikKeyResult<bool> {
         if user_id.trim().is_empty() || public_key.trim().is_empty() {
-            return Err(MajikKeyError::msg("userId and publicKey must be non-empty strings"));
+            return Err(MajikKeyError::msg(
+                "userId and publicKey must be non-empty strings",
+            ));
         }
         Ok(phash(user_id, public_key, &self.id, &self.ml_key) == self.phash)
     }
 
     pub fn to_json(&self) -> MajikMessageIdentityJson {
         MajikMessageIdentityJson {
-            id: self.id.clone(), user_id: self.user_id.clone(), public_key: self.public_key.clone(),
-            ml_key: self.ml_key.clone(), phash: self.phash.clone(), label: self.label.clone(),
-            timestamp: self.timestamp.clone(), restricted: self.restricted,
+            id: self.id.clone(),
+            user_id: self.user_id.clone(),
+            public_key: self.public_key.clone(),
+            ml_key: self.ml_key.clone(),
+            phash: self.phash.clone(),
+            label: self.label.clone(),
+            timestamp: self.timestamp.clone(),
+            restricted: self.restricted,
         }
     }
 

@@ -11,7 +11,9 @@ use serde_json::Value;
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::core::backup::error::{BackupResult, MajikKeyBackupError as E};
-use crate::core::backup::types::{BackupSeed, CreateBackupParams, ToZipOptions, BACKUP_FORMAT_VERSION};
+use crate::core::backup::types::{
+    BackupSeed, CreateBackupParams, ToZipOptions, BACKUP_FORMAT_VERSION,
+};
 use crate::core::backup::utils::{build_readme_text, looks_like_png, to_safe_file_name, PngCodec};
 use crate::core::backup::validator::validate_mnemonic_json_shape;
 use crate::core::crypto::wordlist::MnemonicLanguage;
@@ -49,11 +51,14 @@ impl MajikKeyBackup {
 
     /// Validates and wraps an already-parsed JSON payload.
     pub fn from_json(input: &Value) -> BackupResult<Self> {
-        Ok(Self { data: validate_mnemonic_json_shape(input)? })
+        Ok(Self {
+            data: validate_mnemonic_json_shape(input)?,
+        })
     }
 
     pub fn from_json_str(input: &str) -> BackupResult<Self> {
-        let v: Value = serde_json::from_str(input).map_err(|e| E::InvalidBackupJson(e.to_string()))?;
+        let v: Value =
+            serde_json::from_str(input).map_err(|e| E::InvalidBackupJson(e.to_string()))?;
         Self::from_json(&v)
     }
 
@@ -69,7 +74,9 @@ impl MajikKeyBackup {
                 serde_json::from_str(&text).map_err(|e| E::InvalidBackupPng(e.to_string()))
             })
             .map_err(|e| E::InvalidBackupPng(format!("could not decode embedded payload ({e})")))?;
-        Ok(Self { data: validate_mnemonic_json_shape(&decoded)? })
+        Ok(Self {
+            data: validate_mnemonic_json_shape(&decoded)?,
+        })
     }
 
     /// Parses a `.zip` backup archive. Classification is by magic bytes, not
@@ -128,7 +135,8 @@ impl MajikKeyBackup {
         if let (Some(p), Some(j)) = (&png_result, &json_result) {
             if p.id() != j.id() || p.seed() != j.seed() {
                 return Err(E::BackupIntegrityMismatch(
-                    "the PNG and JSON backups inside this archive do not describe the same account".into(),
+                    "the PNG and JSON backups inside this archive do not describe the same account"
+                        .into(),
                 ));
             }
         }
@@ -172,7 +180,11 @@ impl MajikKeyBackup {
     }
 
     /// Zip with `backup.json` + README, plus `backup.png` when a `codec` is supplied.
-    pub fn to_zip(&self, codec: Option<&dyn PngCodec>, _opts: &ToZipOptions) -> BackupResult<Vec<u8>> {
+    pub fn to_zip(
+        &self,
+        codec: Option<&dyn PngCodec>,
+        _opts: &ToZipOptions,
+    ) -> BackupResult<Vec<u8>> {
         let zerr = |e: &dyn std::fmt::Display| E::InvalidBackupZip(e.to_string());
         let mut buf = Cursor::new(Vec::new());
         {
@@ -180,15 +192,20 @@ impl MajikKeyBackup {
             let opts = SimpleFileOptions::default()
                 .compression_method(CompressionMethod::Deflated)
                 .compression_level(Some(9));
-            zip.start_file(BACKUP_JSON_FILENAME, opts).map_err(|e| zerr(&e))?;
-            zip.write_all(self.json_string().as_bytes()).map_err(|e| zerr(&e))?;
+            zip.start_file(BACKUP_JSON_FILENAME, opts)
+                .map_err(|e| zerr(&e))?;
+            zip.write_all(self.json_string().as_bytes())
+                .map_err(|e| zerr(&e))?;
             if let Some(c) = codec {
                 let png = self.to_png(c)?;
-                zip.start_file(BACKUP_PNG_FILENAME, opts).map_err(|e| zerr(&e))?;
+                zip.start_file(BACKUP_PNG_FILENAME, opts)
+                    .map_err(|e| zerr(&e))?;
                 zip.write_all(&png).map_err(|e| zerr(&e))?;
             }
-            zip.start_file(README_FILENAME, opts).map_err(|e| zerr(&e))?;
-            zip.write_all(build_readme_text(jiff::Timestamp::now()).as_bytes()).map_err(|e| zerr(&e))?;
+            zip.start_file(README_FILENAME, opts)
+                .map_err(|e| zerr(&e))?;
+            zip.write_all(build_readme_text(jiff::Timestamp::now()).as_bytes())
+                .map_err(|e| zerr(&e))?;
             zip.finish().map_err(|e| zerr(&e))?;
         }
         Ok(buf.into_inner())
