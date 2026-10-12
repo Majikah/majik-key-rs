@@ -108,12 +108,12 @@ The Rust crate intentionally mirrors the portable account model used by the Type
 
 Every new account automatically derives these **four core keypairs**:
 
-| Key ID | Algorithm | Purpose |
-| :--- | :--- | :--- |
-| `classic:x25519` | X25519 | Identity and classical key agreement |
-| `classic:ed25519` | Ed25519 | Classical signing |
-| `pq:ml-kem-768` | ML-KEM-768 (FIPS 203) | Post-quantum key encapsulation |
-| `pq:ml-dsa-87` | ML-DSA-87 (FIPS 204) | Post-quantum signing |
+| Key ID            | Algorithm             | Purpose                              |
+| :---------------- | :-------------------- | :----------------------------------- |
+| `classic:x25519`  | X25519                | Identity and classical key agreement |
+| `classic:ed25519` | Ed25519               | Classical signing                    |
+| `pq:ml-kem-768`   | ML-KEM-768 (FIPS 203) | Post-quantum key encapsulation       |
+| `pq:ml-dsa-87`    | ML-DSA-87 (FIPS 204)  | Post-quantum signing                 |
 
 A Solana key (`web3:sol`) is exposed as a **derived view** from the Ed25519 key and does not require a separate stored secret.
 
@@ -219,21 +219,21 @@ The library itself does not expose a command-line executable. If you need a sing
 
 Each key is addressed by a namespaced `KeyId`.
 
-| Family | Key ID | Algorithm | Status |
-| :--- | :--- | :--- | :--- |
-| classic | `KeyId::X25519`, `KeyId::Ed25519` | X25519, Ed25519 | ✅ Core — always created |
-| pq (KEM) | `KeyId::MlKem768` | ML-KEM-768 | ✅ Core — always created |
-| pq (KEM) | `KeyId::MlKem512`, `KeyId::MlKem1024` | ML-KEM-512 / 1024 | ✅ Stable, opt-in |
-| pq (signature) | `KeyId::MlDsa87` | ML-DSA-87 | ✅ Core — always created |
-| pq (signature) | `KeyId::MlDsa44`, `KeyId::MlDsa65` | ML-DSA-44 / 65 | ✅ Stable, opt-in |
-| pq (signature) | `KeyId::SlhDsa...` | SLH-DSA parameter sets | ✅ Stable, opt-in |
-| pq (signature) | `KeyId::Falcon512`, `KeyId::Falcon1024` | Falcon | 🧪 Experimental |
-| web3 | `KeyId::Btc` | Bitcoin / secp256k1, BIP-32/84 | 🧪 Experimental, opt-in |
-| web3 | `KeyId::Eth` | Ethereum / secp256k1, BIP-44 | 🧪 Experimental, opt-in |
-| web3 | `KeyId::Sol` | Solana / Ed25519-derived | 🧪 Experimental, derived view |
-| pq (KEM) | `KeyId::Hqc128`, `KeyId::Hqc192`, `KeyId::Hqc256` | HQC | ⏳ Reserved |
-| pq (signature) | `KeyId::FnDsa512`, `KeyId::FnDsa1024` | FN-DSA | ⏳ Reserved |
-| pq (signature) | `KeyId::Lms` | LMS / HSS | 🚫 Not supported |
+| Family         | Key ID                                            | Algorithm                      | Status                       |
+| :------------- | :------------------------------------------------ | :----------------------------- | :--------------------------- |
+| classic        | `KeyId::X25519`, `KeyId::Ed25519`                 | X25519, Ed25519                | ✅ Core — always created      |
+| pq (KEM)       | `KeyId::MlKem768`                                 | ML-KEM-768                     | ✅ Core — always created      |
+| pq (KEM)       | `KeyId::MlKem512`, `KeyId::MlKem1024`             | ML-KEM-512 / 1024              | ✅ Stable, opt-in             |
+| pq (signature) | `KeyId::MlDsa87`                                  | ML-DSA-87                      | ✅ Core — always created      |
+| pq (signature) | `KeyId::MlDsa44`, `KeyId::MlDsa65`                | ML-DSA-44 / 65                 | ✅ Stable, opt-in             |
+| pq (signature) | `KeyId::SlhDsa...`                                | SLH-DSA parameter sets         | ✅ Stable, opt-in             |
+| pq (signature) | `KeyId::Falcon512`, `KeyId::Falcon1024`           | Falcon                         | 🧪 Experimental               |
+| web3           | `KeyId::Btc`                                      | Bitcoin / secp256k1, BIP-32/84 | 🧪 Experimental, opt-in       |
+| web3           | `KeyId::Eth`                                      | Ethereum / secp256k1, BIP-44   | 🧪 Experimental, opt-in       |
+| web3           | `KeyId::Sol`                                      | Solana / Ed25519-derived       | 🧪 Experimental, derived view |
+| pq (KEM)       | `KeyId::Hqc128`, `KeyId::Hqc192`, `KeyId::Hqc256` | HQC                            | ⏳ Reserved                   |
+| pq (signature) | `KeyId::FnDsa512`, `KeyId::FnDsa1024`             | FN-DSA                         | ⏳ Reserved                   |
+| pq (signature) | `KeyId::Lms`                                      | LMS / HSS                      | 🚫 Not supported              |
 
 Use:
 
@@ -400,14 +400,14 @@ This gives Rust callers a compile-time guarantee that a handle cannot silently r
 
 The Rust crate is designed around the same portable account format used by Majik Key's TypeScript implementation.
 
-| Existing data | Rust behavior |
-| :--- | :--- |
-| Registry JSON containing `keys` | Loaded directly through `from_json()` / `from_json_str()`. |
-| Older flat JSON with no `keys` field | Auto-migrated in memory to the registry representation. |
-| Legacy PBKDF2 account | Still readable; `migrate()` upgrades encryption to Argon2id. |
-| Account missing newer core keys | Loads normally; `missing_keys(None)` reports the gaps. |
-| Old mnemonic backup | Legacy backup KDF/salt handling is retained for verification. |
-| JSON containing newer key entries | Future entries can remain preserved by the serialized registry even if the current crate cannot use them. |
+| Existing data                        | Rust behavior                                                                                             |
+| :----------------------------------- | :-------------------------------------------------------------------------------------------------------- |
+| Registry JSON containing `keys`      | Loaded directly through `from_json()` / `from_json_str()`.                                                |
+| Older flat JSON with no `keys` field | Auto-migrated in memory to the registry representation.                                                   |
+| Legacy PBKDF2 account                | Still readable; `migrate()` upgrades encryption to Argon2id.                                              |
+| Account missing newer core keys      | Loads normally; `missing_keys(None)` reports the gaps.                                                    |
+| Old mnemonic backup                  | Legacy backup KDF/salt handling is retained for verification.                                             |
+| JSON containing newer key entries    | Future entries can remain preserved by the serialized registry even if the current crate cannot use them. |
 
 By default, `to_json()` writes both the registry (`keys`) and the legacy flat fields for compatibility. Use `to_json_with(&MajikKeyToJsonOptions { legacy: false })` when you explicitly want registry-only output.
 
@@ -481,16 +481,16 @@ Legacy PBKDF2 accounts remain readable. Compatibility unlock/migration may deriv
 
 ### How keys are derived
 
-| Key | Recipe | Stability |
-| :--- | :--- | :--- |
-| X25519 | Derived from the account's Ed25519 branch using the legacy-compatible conversion recipe | 🔒 Frozen |
-| Ed25519 | First 32 bytes of the 64-byte BIP-39 seed | 🔒 Frozen |
-| ML-KEM-768 | Full 64-byte BIP-39 seed | 🔒 Frozen |
-| ML-DSA-87 | `sha256(seed ‖ "MajikSignatureSeedDSA")` | 🔒 Frozen |
-| Bitcoin | BIP-32, Majik domain path by default; standard BIP-84 available as an explicit mnemonic derivation | 🔒 Frozen / experimental |
-| Ethereum | BIP-32, standard `m/44'/60'/0'/0/0` | Stable / experimental |
-| Solana | `sha256(edSeed ‖ "MajikKeySolanaSeed")` by default, derived on demand | Stable / experimental |
-| Other enabled algorithms | Versioned HKDF-SHA512 recipe using the key ID as domain-separated context | Stable / pinned by test vectors |
+| Key                      | Recipe                                                                                             | Stability                       |
+| :----------------------- | :------------------------------------------------------------------------------------------------- | :------------------------------ |
+| X25519                   | Derived from the account's Ed25519 branch using the legacy-compatible conversion recipe            | 🔒 Frozen                        |
+| Ed25519                  | First 32 bytes of the 64-byte BIP-39 seed                                                          | 🔒 Frozen                        |
+| ML-KEM-768               | Full 64-byte BIP-39 seed                                                                           | 🔒 Frozen                        |
+| ML-DSA-87                | `sha256(seed ‖ "MajikSignatureSeedDSA")`                                                           | 🔒 Frozen                        |
+| Bitcoin                  | BIP-32, Majik domain path by default; standard BIP-84 available as an explicit mnemonic derivation | 🔒 Frozen / experimental         |
+| Ethereum                 | BIP-32, standard `m/44'/60'/0'/0/0`                                                                | Stable / experimental           |
+| Solana                   | `sha256(edSeed ‖ "MajikKeySolanaSeed")` by default, derived on demand                              | Stable / experimental           |
+| Other enabled algorithms | Versioned HKDF-SHA512 recipe using the key ID as domain-separated context                          | Stable / pinned by test vectors |
 
 The important design property is **domain separation**: adding one algorithm must not silently alter an existing algorithm's seed material.
 
@@ -597,11 +597,11 @@ The X25519 identity branch provides a portable identity primitive from which pub
 
 Web3 support is included in the registry but should be treated as experimental. The core cryptographic identity model does not depend on Web3.
 
-| Chain | Key material | Opt in with | Notes |
-| :--- | :--- | :--- | :--- |
-| Bitcoin | Stored secp256k1 key | `KeyId::Btc` | Majik domain-separated default path |
-| Ethereum | Stored secp256k1 key | `KeyId::Eth` | Standard BIP-44 path |
-| Solana | Derived Ed25519 view | Always available when Ed25519 exists | No additional stored secret |
+| Chain    | Key material         | Opt in with                          | Notes                               |
+| :------- | :------------------- | :----------------------------------- | :---------------------------------- |
+| Bitcoin  | Stored secp256k1 key | `KeyId::Btc`                         | Majik domain-separated default path |
+| Ethereum | Stored secp256k1 key | `KeyId::Eth`                         | Standard BIP-44 path                |
+| Solana   | Derived Ed25519 view | Always available when Ed25519 exists | No additional stored secret         |
 
 ### Bitcoin
 
@@ -659,60 +659,60 @@ The following is the public API exposed by the `MajikKey` implementation. Rust c
 
 ### Associated functions
 
-| Function | Description |
-| :--- | :--- |
-| `MajikKey::create(mnemonic, passphrase, label, options)` | Create an Argon2id-protected account. Core four are always derived; optional keys come from `options.keys`. Returns unlocked. |
-| `MajikKey::from_json(parsed)` | Load an account from `MajikKeyJson`. Starts locked. Accepts registry and legacy flat shapes. |
-| `MajikKey::from_json_str(json)` | Parse JSON text and load an account. Starts locked. |
-| `MajikKey::from_mnemonic_json(json, passphrase, label, options)` | Re-create an account from a mnemonic transport structure. |
-| `MajikKey::from_mnemonic_json_str(json, passphrase, label, options)` | Parse mnemonic JSON text and re-create the account. |
-| `MajikKey::import_from_mnemonic_backup(backup, mnemonic, passphrase, label, options)` | Verify an encrypted mnemonic backup, then re-derive and re-encrypt the account under the supplied passphrase. |
-| `MajikKey::from_dangerous_json(parsed)` | Reconstruct an unlocked account from raw private key material. **Dangerous.** |
-| `MajikKey::generate_mnemonic(strength, language)` | Generate a 12-word (`128`) or 24-word (`256`) BIP-39 mnemonic. |
-| `MajikKey::validate_mnemonic(mnemonic)` | Fast non-empty/shape validation helper. Use the language-aware validation path during derivation/import. |
-| `MajikKey::supported_keys()` | Return key IDs this crate can create or enable. |
-| `MajikKey::derive_standard_bitcoin_from_mnemonic(mnemonic, language)` | Derive the standard BIP-84 Bitcoin mainnet key directly from a mnemonic. Experimental. |
+| Function                                                                              | Description                                                                                                                   |
+| :------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------- |
+| `MajikKey::create(mnemonic, passphrase, label, options)`                              | Create an Argon2id-protected account. Core four are always derived; optional keys come from `options.keys`. Returns unlocked. |
+| `MajikKey::from_json(parsed)`                                                         | Load an account from `MajikKeyJson`. Starts locked. Accepts registry and legacy flat shapes.                                  |
+| `MajikKey::from_json_str(json)`                                                       | Parse JSON text and load an account. Starts locked.                                                                           |
+| `MajikKey::from_mnemonic_json(json, passphrase, label, options)`                      | Re-create an account from a mnemonic transport structure.                                                                     |
+| `MajikKey::from_mnemonic_json_str(json, passphrase, label, options)`                  | Parse mnemonic JSON text and re-create the account.                                                                           |
+| `MajikKey::import_from_mnemonic_backup(backup, mnemonic, passphrase, label, options)` | Verify an encrypted mnemonic backup, then re-derive and re-encrypt the account under the supplied passphrase.                 |
+| `MajikKey::from_dangerous_json(parsed)`                                               | Reconstruct an unlocked account from raw private key material. **Dangerous.**                                                 |
+| `MajikKey::generate_mnemonic(strength, language)`                                     | Generate a 12-word (`128`) or 24-word (`256`) BIP-39 mnemonic.                                                                |
+| `MajikKey::validate_mnemonic(mnemonic)`                                               | Fast non-empty/shape validation helper. Use the language-aware validation path during derivation/import.                      |
+| `MajikKey::supported_keys()`                                                          | Return key IDs this crate can create or enable.                                                                               |
+| `MajikKey::derive_standard_bitcoin_from_mnemonic(mnemonic, language)`                 | Derive the standard BIP-84 Bitcoin mainnet key directly from a mnemonic. Experimental.                                        |
 
 ### Instance methods
 
-| Function | Description |
-| :--- | :--- |
-| `unlock(passphrase)` | Derive the vault key and decrypt the account's stored key slots atomically. |
-| `lock()` | Purge unlocked secret material from the key store. |
-| `verify(passphrase)` | Check whether a passphrase can decrypt the account without unlocking it. |
-| `update_passphrase(current, new)` | Re-encrypt every stored secret under a fresh salt and Argon2id. |
-| `migrate(passphrase)` | Upgrade a legacy PBKDF2 account to Argon2id without changing the passphrase. |
-| `add_keys(ids, mnemonic, passphrase)` | Derive and add missing keys from the original mnemonic. |
-| `update_label(new_label)` | Change the human-readable account label. |
-| `with_auto_lock(operation)` | Run an operation on an already unlocked account and always lock afterward, even if the closure panics. |
+| Function                              | Description                                                                                            |
+| :------------------------------------ | :----------------------------------------------------------------------------------------------------- |
+| `unlock(passphrase)`                  | Derive the vault key and decrypt the account's stored key slots atomically.                            |
+| `lock()`                              | Purge unlocked secret material from the key store.                                                     |
+| `verify(passphrase)`                  | Check whether a passphrase can decrypt the account without unlocking it.                               |
+| `update_passphrase(current, new)`     | Re-encrypt every stored secret under a fresh salt and Argon2id.                                        |
+| `migrate(passphrase)`                 | Upgrade a legacy PBKDF2 account to Argon2id without changing the passphrase.                           |
+| `add_keys(ids, mnemonic, passphrase)` | Derive and add missing keys from the original mnemonic.                                                |
+| `update_label(new_label)`             | Change the human-readable account label.                                                               |
+| `with_auto_lock(operation)`           | Run an operation on an already unlocked account and always lock afterward, even if the closure panics. |
 
 ### Registry methods
 
-| Function | Description |
-| :--- | :--- |
-| `has_key(id)` | Check whether a key is available. Works while locked. |
-| `has_keys(ids)` | Check whether all requested keys are available. |
-| `missing_keys(ids)` | Report absent IDs; `None` means the core four. |
-| `available_keys(family)` | Return available key IDs in canonical order, optionally filtered by family. |
-| `list_keys()` | Return non-secret `KeyInfo` metadata for every available key. |
-| `get_public_key(id)` | Return public key bytes. Works while locked; derived views may require source material. |
-| `get_private_key(id)` | Return an owned `Zeroizing` secret buffer. Requires an unlocked account. |
-| `get_keypair(id)` | Return a borrowed `MajikKeypair<'_>` handle. |
+| Function                 | Description                                                                             |
+| :----------------------- | :-------------------------------------------------------------------------------------- |
+| `has_key(id)`            | Check whether a key is available. Works while locked.                                   |
+| `has_keys(ids)`          | Check whether all requested keys are available.                                         |
+| `missing_keys(ids)`      | Report absent IDs; `None` means the core four.                                          |
+| `available_keys(family)` | Return available key IDs in canonical order, optionally filtered by family.             |
+| `list_keys()`            | Return non-secret `KeyInfo` metadata for every available key.                           |
+| `get_public_key(id)`     | Return public key bytes. Works while locked; derived views may require source material. |
+| `get_private_key(id)`    | Return an owned `Zeroizing` secret buffer. Requires an unlocked account.                |
+| `get_keypair(id)`        | Return a borrowed `MajikKeypair<'_>` handle.                                            |
 
 ### Serialization and integration
 
-| Function | Description |
-| :--- | :--- |
-| `to_json()` | Safe account export containing encrypted secrets, never raw secret keys. Writes registry + legacy compatibility fields by default. |
-| `to_json_with(options)` | Same as `to_json()` with explicit control over legacy flat field emission. |
-| `to_json_string(pretty)` | Serialize the safe JSON representation to text. |
-| `to_dangerous_json()` | Export all raw stored private key material. **Never use for ordinary persistence.** |
-| `to_mnemonic_json(mnemonic, passphrase)` | Create a plaintext mnemonic transport structure. Requires unlocked account. |
-| `to_contact(label_override)` | Export public identity/contact data. |
-| `to_key_identity()` | Export the unlocked in-memory identity bundle. |
-| `to_serialized_identity()` | Export an unlocked serialized identity bundle containing the encrypted X25519 secret representation. |
-| `to_majik_message_identity(user, options)` | Format the key for Majik Message integration. |
-| `export_mnemonic_backup(mnemonic)` | Create an encrypted backup string that can be verified/decrypted only with the corresponding mnemonic. |
+| Function                                   | Description                                                                                                                        |
+| :----------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| `to_json()`                                | Safe account export containing encrypted secrets, never raw secret keys. Writes registry + legacy compatibility fields by default. |
+| `to_json_with(options)`                    | Same as `to_json()` with explicit control over legacy flat field emission.                                                         |
+| `to_json_string(pretty)`                   | Serialize the safe JSON representation to text.                                                                                    |
+| `to_dangerous_json()`                      | Export all raw stored private key material. **Never use for ordinary persistence.**                                                |
+| `to_mnemonic_json(mnemonic, passphrase)`   | Create a plaintext mnemonic transport structure. Requires unlocked account.                                                        |
+| `to_contact(label_override)`               | Export public identity/contact data.                                                                                               |
+| `to_key_identity()`                        | Export the unlocked in-memory identity bundle.                                                                                     |
+| `to_serialized_identity()`                 | Export an unlocked serialized identity bundle containing the encrypted X25519 secret representation.                               |
+| `to_majik_message_identity(user, options)` | Format the key for Majik Message integration.                                                                                      |
+| `export_mnemonic_backup(mnemonic)`         | Create an encrypted backup string that can be verified/decrypted only with the corresponding mnemonic.                             |
 
 ### Getters
 
@@ -743,36 +743,36 @@ let metadata = key.metadata();
 
 ### Web3 methods
 
-| Function | Description |
-| :--- | :--- |
-| `web3()` | Experimental aggregate namespace; requires an Ed25519-derived Solana capability and may include stored Bitcoin/Ethereum keys. |
-| `has_bitcoin_keypair()` | True when Bitcoin secret material is currently available in memory. |
-| `get_bitcoin_keypair_material(options)` | Get the stored Bitcoin key material. |
-| `get_bitcoin_wif(compressed)` | Export the stored Bitcoin key as WIF. |
-| `has_ethereum()` | Check whether the account stores an Ethereum key. Works while locked. |
-| `get_ethereum_address()` | Return the EIP-55 Ethereum address. Public-only. |
-| `get_ethereum_keypair_material()` | Return raw Ethereum key material. Requires unlocked account. |
-| `get_ethereum_private_key_hex()` | Return the private key as `0x...` hex. Requires unlocked account. |
-| `has_solana_keypair()` | True when an Ed25519 secret is currently available for Solana derivation. |
-| `get_solana_keypair_material(options)` | Derive Solana keypair material on demand. |
-| `get_solana_address(options)` | Return the Base58 Solana address. |
+| Function                                | Description                                                                                                                   |
+| :-------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- |
+| `web3()`                                | Experimental aggregate namespace; requires an Ed25519-derived Solana capability and may include stored Bitcoin/Ethereum keys. |
+| `has_bitcoin_keypair()`                 | True when Bitcoin secret material is currently available in memory.                                                           |
+| `get_bitcoin_keypair_material(options)` | Get the stored Bitcoin key material.                                                                                          |
+| `get_bitcoin_wif(compressed)`           | Export the stored Bitcoin key as WIF.                                                                                         |
+| `has_ethereum()`                        | Check whether the account stores an Ethereum key. Works while locked.                                                         |
+| `get_ethereum_address()`                | Return the EIP-55 Ethereum address. Public-only.                                                                              |
+| `get_ethereum_keypair_material()`       | Return raw Ethereum key material. Requires unlocked account.                                                                  |
+| `get_ethereum_private_key_hex()`        | Return the private key as `0x...` hex. Requires unlocked account.                                                             |
+| `has_solana_keypair()`                  | True when an Ed25519 secret is currently available for Solana derivation.                                                     |
+| `get_solana_keypair_material(options)`  | Derive Solana keypair material on demand.                                                                                     |
+| `get_solana_address(options)`           | Return the Base58 Solana address.                                                                                             |
 
 ### Deprecated compatibility methods
 
 The Rust crate keeps thin registry wrappers for compatibility with older Majik Key code:
 
-| Deprecated method | Preferred replacement |
-| :--- | :--- |
-| `ml_kem_public_key()` | `get_public_key(KeyId::MlKem768)` |
-| `ml_kem_secret_key()` / `get_ml_kem_secret_key()` | `get_private_key(KeyId::MlKem768)` |
-| `ed_public_key()` / `get_ed_secret_key()` | `get_public_key(KeyId::Ed25519)` / `get_private_key(KeyId::Ed25519)` |
+| Deprecated method                                 | Preferred replacement                                                |
+| :------------------------------------------------ | :------------------------------------------------------------------- |
+| `ml_kem_public_key()`                             | `get_public_key(KeyId::MlKem768)`                                    |
+| `ml_kem_secret_key()` / `get_ml_kem_secret_key()` | `get_private_key(KeyId::MlKem768)`                                   |
+| `ed_public_key()` / `get_ed_secret_key()`         | `get_public_key(KeyId::Ed25519)` / `get_private_key(KeyId::Ed25519)` |
 | `ml_dsa_public_key()` / `get_ml_dsa_secret_key()` | `get_public_key(KeyId::MlDsa87)` / `get_private_key(KeyId::MlDsa87)` |
-| `btc_public_key()` / `get_btc_secret_key()` | `get_public_key(KeyId::Btc)` / `get_private_key(KeyId::Btc)` |
-| `has_ml_kem()` | `has_key(KeyId::MlKem768)` |
-| `has_signing_keys()` | `has_keys(&[KeyId::Ed25519, KeyId::MlDsa87])` |
-| `has_bitcoin()` | `has_key(KeyId::Btc)` |
-| `get_private_key_base64()` | `get_private_key(KeyId::X25519)` |
-| `MajikKeyCreateOptions::derive_bitcoin = true` | `keys: vec![KeyId::Btc]` |
+| `btc_public_key()` / `get_btc_secret_key()`       | `get_public_key(KeyId::Btc)` / `get_private_key(KeyId::Btc)`         |
+| `has_ml_kem()`                                    | `has_key(KeyId::MlKem768)`                                           |
+| `has_signing_keys()`                              | `has_keys(&[KeyId::Ed25519, KeyId::MlDsa87])`                        |
+| `has_bitcoin()`                                   | `has_key(KeyId::Btc)`                                                |
+| `get_private_key_base64()`                        | `get_private_key(KeyId::X25519)`                                     |
+| `MajikKeyCreateOptions::derive_bitcoin = true`    | `keys: vec![KeyId::Btc]`                                             |
 
 ---
 
@@ -1004,25 +1004,25 @@ The Rust crate intentionally preserves the Majik Key account model instead of in
 
 ### Compatible concepts
 
-| TypeScript | Rust |
-| :--- | :--- |
-| `MajikKey.create(...)` | `MajikKey::create(...)` |
-| `MajikKey.fromJSON(...)` | `MajikKey::from_json(...)` / `from_json_str(...)` |
-| `getPublicKey(id)` | `get_public_key(id)` |
-| `getPrivateKey(id)` | `get_private_key(id)` |
-| `getKeypair(id)` | `get_keypair(id)` |
-| `availableKeys()` | `available_keys(...)` |
-| `listKeys()` | `list_keys()` |
-| `hasKey(id)` | `has_key(id)` |
-| `missingKeys()` | `missing_keys(None)` |
-| `addKeys(...)` | `add_keys(...)` |
-| `updatePassphrase(...)` | `update_passphrase(...)` |
-| `exportMnemonicBackup(...)` | `export_mnemonic_backup(...)` |
-| `importFromMnemonicBackup(...)` | `import_from_mnemonic_backup(...)` |
-| `toJSON()` | `to_json()` / `to_json_string(...)` |
-| `toDangerousJSON()` | `to_dangerous_json()` |
-| `lock()` / `unlock()` | `lock()` / `unlock(...)` |
-| `withAutoLock(...)` | `with_auto_lock(...)` |
+| TypeScript                      | Rust                                              |
+| :------------------------------ | :------------------------------------------------ |
+| `MajikKey.create(...)`          | `MajikKey::create(...)`                           |
+| `MajikKey.fromJSON(...)`        | `MajikKey::from_json(...)` / `from_json_str(...)` |
+| `getPublicKey(id)`              | `get_public_key(id)`                              |
+| `getPrivateKey(id)`             | `get_private_key(id)`                             |
+| `getKeypair(id)`                | `get_keypair(id)`                                 |
+| `availableKeys()`               | `available_keys(...)`                             |
+| `listKeys()`                    | `list_keys()`                                     |
+| `hasKey(id)`                    | `has_key(id)`                                     |
+| `missingKeys()`                 | `missing_keys(None)`                              |
+| `addKeys(...)`                  | `add_keys(...)`                                   |
+| `updatePassphrase(...)`         | `update_passphrase(...)`                          |
+| `exportMnemonicBackup(...)`     | `export_mnemonic_backup(...)`                     |
+| `importFromMnemonicBackup(...)` | `import_from_mnemonic_backup(...)`                |
+| `toJSON()`                      | `to_json()` / `to_json_string(...)`               |
+| `toDangerousJSON()`             | `to_dangerous_json()`                             |
+| `lock()` / `unlock()`           | `lock()` / `unlock(...)`                          |
+| `withAutoLock(...)`             | `with_auto_lock(...)`                             |
 
 ### Deliberate Rust differences
 

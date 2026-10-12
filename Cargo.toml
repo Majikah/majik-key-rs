@@ -1,6 +1,6 @@
 [package]
 name = "majik-key"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "A post-quantum ready seed phrase account library for the Majikah ecosystem. Pure-Rust multi-key registry (X25519, Ed25519, ML-KEM, ML-DSA, SLH-DSA, BTC/ETH/SOL) derived from one BIP-39 mnemonic and protected with Argon2id."
@@ -13,6 +13,27 @@ homepage = "https://majikah.solutions"
 [lib]
 name = "majik_key"
 crate-type = ["lib"]
+
+# The command-line interface. Off by default so library consumers (e.g. the Tauri
+# app) never compile clap. Build/install with:  cargo install majik-key --features cli
+[features]
+default = []
+cli = ["dep:clap", "dep:libc", "dep:rpassword", "dep:unicode-normalization"]
+
+[[bin]]
+name = "majik-key"
+path = "src/bin/majik-key.rs"
+required-features = ["cli"]
+
+[[bin]]
+name = "mjkkey"
+path = "src/bin/mjkkey.rs"
+required-features = ["cli"]
+
+[[test]]
+name = "cli"
+path = "tests/ts_cli.rs"
+required-features = ["cli"]
 
 [dependencies]
 # ── mnemonic / seed ──
@@ -30,7 +51,7 @@ aes-gcm = "0.11.1"
 argon2 = "0.6.0"
 pbkdf2 = "0.13"
 hkdf = "0.13"
-sha2 = "0.11"
+sha2 = "0.11.1"
 
 # ── post-quantum ──
 ml-kem = { version = "0.3.2", features = ["getrandom"] }
@@ -45,15 +66,27 @@ ripemd = "0.2"
 bech32 = "0.12"
 bs58 = { version = "0.5", features = ["check"] }
 
+# ── cli (optional; enabled by the `cli` feature) ──
+clap = { version = "4", features = ["derive"], optional = true }
+unicode-normalization = { version = "0.1", optional = true }
+
 # ── plumbing ──
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
+serde_json = "1.0.154"
 base64 = "0.23.1"
 zeroize = { version = "1.9.1", features = ["zeroize_derive"] }
 getrandom = "0.4.3"
 jiff = "0.2.38"
 thiserror = "2.0.21"
-zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
+zip = { version = "9.0.2", default-features = false, features = ["deflate"] }
+
+# Hidden prompts: a small termios reader on Unix (echo is disabled BEFORE the prompt prints,
+# and Ctrl-C is handled so the terminal is never left in no-echo mode); rpassword elsewhere.
+[target.'cfg(unix)'.dependencies]
+libc = { version = "0.2.190", optional = true }
+
+[target.'cfg(not(unix))'.dependencies]
+rpassword = { version = "7", optional = true }
 
 [dev-dependencies]
 hex = "0.4"
