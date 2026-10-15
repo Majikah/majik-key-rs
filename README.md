@@ -25,6 +25,8 @@ The Rust crate intentionally mirrors the portable account model used by the Type
   - [What you get by default](#what-you-get-by-default)
   - [Quick Start](#quick-start)
   - [Installation](#installation)
+  - [Command-line interface (CLI)](#command-line-interface-cli)
+    - [CLI Documentation](#cli-documentation)
   - [Multi-key support](#multi-key-support)
     - [Supported keys](#supported-keys)
       - [Why LMS is not offered](#why-lms-is-not-offered)
@@ -209,7 +211,45 @@ The crate is a native Rust library:
 use majik_key::{KeyId, MajikKey, MajikKeyCreateOptions, MnemonicLanguage};
 ```
 
-The library itself does not expose a command-line executable. If you need a single native CLI binary, build a small Rust binary crate that depends on `majik-key`.
+The CLI is optional and is not compiled for library users unless the `cli` feature is enabled.
+
+## Command-line interface (CLI)
+
+The crate provides a native command-line interface for creating, inspecting, importing, and managing Majik Key files. It builds two executable names, `majik-key` and `mjkkey`; both run the same CLI.
+
+Install the CLI from crates.io with:
+
+```bash
+cargo install majik-key --features cli
+```
+
+Then see the available commands and options:
+
+```bash
+majik-key --help
+majik-key generate
+```
+
+To try it from a repository checkout without installing:
+
+```bash
+cargo run --features cli --bin majik-key -- --help
+cargo run --features cli --bin majik-key -- generate
+```
+
+To build an optimized standalone binary:
+
+```bash
+cargo build --release --features cli
+```
+
+The resulting executable is `target/release/majik-key` on Unix-like systems and `target\release\majik-key.exe` on Windows. Use `--bin mjkkey` instead to run or build the alias.
+
+### CLI Documentation
+
+For the complete command reference, installation instructions, key lifecycle workflows, supported algorithms, passphrase handling, export formats, recovery procedures, automation examples, exit codes, and security guidance, see the dedicated CLI documentation:
+
+[![Read the Majik Key CLI Documentation](https://img.shields.io/badge/Read_the_CLI_Documentation-EA7F05?style=for-the-badge)](./CLI_README.md)
 
 ---
 

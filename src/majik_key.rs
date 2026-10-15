@@ -30,7 +30,7 @@ use crate::core::crypto::crypto_provider::{
 };
 use crate::core::crypto::wordlist::MnemonicLanguage;
 use crate::core::database::system::identity::{
-    IdentityOptions, MajikContactData, MajikMessageIdentity, MajikUserRef,
+    IdentityOptions, MajikMessageIdentity, MajikUserRef,
 };
 use crate::core::error::{MajikKeyError, MajikKeyResult};
 use crate::core::keys::key_id::{KeyFamily, KeyId, CORE_KEYS};
@@ -64,6 +64,7 @@ use crate::core::web3::solana::solana::{
 };
 use crate::core::web3::solana::types::MajikKeySolanaNamespace;
 use crate::core::web3::types::MajikKeyWeb3Namespace;
+use majik_contact::{MajikContact, MajikContactData, MajikContactMeta};
 
 // ─── Public option / identity types ─────────────────────────────────────────
 
@@ -1048,19 +1049,38 @@ impl MajikKey {
         MajikKeyValidator::validate_mnemonic(mnemonic).is_ok()
     }
 
-    /// Public-key bundle as a contact. (`MajikContact` itself has no Rust crate yet — see
-    /// `database::system::identity::MajikContactData`.)
-    pub fn to_contact(&self, label_override: Option<&str>) -> MajikContactData {
+    /// Converts the key into a [`MajikContact`] (public data only).
+    ///
+    /// The contact's label defaults to the key's label; any field set in `initial_meta`
+    /// (including `label`) takes precedence, like `toContact(initialMeta)` in TS.
+    ///
+    /// # Errors
+    /// [`MajikKeyError::KeyNotFound`] when the account has no ML-KEM-768 key, or a wrapped
+    /// contact validation error.
+    pub fn to_contact(
+        &self,
+        initial_meta: Option<MajikContactMeta>,
+    ) -> MajikKeyResult<MajikContact> {
         let b64 = |id| self.store.get_public_key(id).ok().map(array_to_base64);
-        MajikContactData {
+        let ml_key = b64(KeyId::MlKem768)
+            .ok_or_else(|| MajikKeyError::KeyNotFound(KeyId::MlKem768.to_string()))?;
+
+        let mut meta = initial_meta.unwrap_or_default();
+        if meta.label.is_none() {
+            meta.label = Some(self.label.clone());
+        }
+
+        MajikContact::new(MajikContactData {
             id: self.id.clone(),
-            public_key_base64: self.public_key_base64.clone(),
+            public_key: majik_contact::X25519RawKey::new(self.public_key.raw.to_vec()),
             fingerprint: self.fingerprint.clone(),
-            label: label_override.unwrap_or(&self.label).to_string(),
-            ml_key: b64(KeyId::MlKem768).unwrap_or_default(),
+            ml_key,
+            meta: Some(meta),
+            majikah_registered: None,
             ed_public_key_base64: b64(KeyId::Ed25519),
             ml_dsa_public_key_base64: b64(KeyId::MlDsa87),
-        }
+        })
+        .map_err(|e| MajikKeyError::with_cause("Failed to build MajikContact", e))
     }
 
     pub fn to_key_identity(&self) -> MajikKeyResult<MajikKeyIdentity> {
@@ -1132,7 +1152,7 @@ impl MajikKey {
                 errors.join(", ")
             )));
         }
-        MajikMessageIdentity::create(user, &self.to_contact(None), options)
+        MajikMessageIdentity::create(user, &self.to_contact(None)?.to_json(), options)
     }
 
     // ── BACKUP ───────────────────────────────────────────────────────────────

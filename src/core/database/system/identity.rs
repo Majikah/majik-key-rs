@@ -1,11 +1,11 @@
 //! Port of `core/database/system/identity.ts` — `MajikMessageIdentity`, an
 //! immutable identity container with an integrity hash.
 //!
-//! The TS file imports `MajikUser` (`@thezelijah/majik-user`) and
-//! `SerializedMajikContact` / `MajikContact` (`@majikah/majik-contact`). Neither
-//! has a Rust crate yet, so minimal data-only stand-ins live here. Swap them for
-//! the real types once those crates exist; the hashing logic doesn't change.
+//! The TS file imports `MajikUser` (`@thezelijah/majik-user`), which has no Rust
+//! crate yet, so a minimal stand-in lives here. `SerializedMajikContact` comes
+//! from the `majik-contact` crate.
 
+use majik_contact::SerializedMajikContact;
 use serde::{Deserialize, Serialize};
 
 use crate::core::crypto::crypto_provider::sha256;
@@ -32,26 +32,6 @@ impl MajikUserRef {
         errors
     }
 }
-
-/// Stand-in for `MajikContactData` — what `MajikKey::to_contact()` produces.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MajikContactData {
-    pub id: String,
-    /// X25519 public key, base64.
-    pub public_key_base64: String,
-    pub fingerprint: String,
-    pub label: String,
-    /// ML-KEM-768 public key, base64.
-    pub ml_key: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ed_public_key_base64: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ml_dsa_public_key_base64: Option<String>,
-}
-
-/// Stand-in for `SerializedMajikContact`.
-pub type SerializedMajikContact = MajikContactData;
 
 #[derive(Debug, Clone, Default)]
 pub struct IdentityOptions {
@@ -139,7 +119,13 @@ impl MajikMessageIdentity {
         let label = opts
             .label
             .filter(|l| !l.is_empty())
-            .or_else(|| Some(account.label.clone()).filter(|l| !l.is_empty()))
+            .or_else(|| {
+                account
+                    .meta
+                    .as_ref()
+                    .and_then(|meta| meta.label.clone())
+                    .filter(|label| !label.is_empty())
+            })
             .unwrap_or_else(|| user.display_name.clone());
 
         Self::new(MajikMessageIdentityJson {

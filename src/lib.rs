@@ -53,3 +53,7 @@ pub use crate::core::web3::{
     utils::{base58_encode, base58check_encode},
 };
 pub use crate::majik_key::*;
+
+/// The contact model used by [`MajikKey::to_contact`] (re-exported so callers share one version).
+pub use majik_contact;
+pub use majik_contact::{MajikContact, MajikContactMeta, SerializedMajikContact};

@@ -677,7 +677,7 @@ pub fn run_export(args: &ExportArgs, json: bool) -> CliOutcome<CliResult> {
         let key = &mut loaded.key;
         let (value, default_name, kind): (Value, String, &str) = if args.contact {
             (
-                to_value(&key.to_contact(None))?,
+                to_value(&key.to_contact(None)?.to_json())?,
                 format!(
                     "majik-contact-{}.json",
                     short_fingerprint(key.fingerprint(), 8)
