@@ -1,6 +1,6 @@
 [package]
 name = "majik-key"
-version = "1.1.1"
+version = "1.2.0"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0"
@@ -81,7 +81,7 @@ zeroize = { version = "1.9.2", features = ["derive"] }
 getrandom = "0.4.3"
 jiff = "1.0.3"
 thiserror = "2.0.21"
-zip = { version = "9.0.2", default-features = false, features = ["deflate"] }
+zip = { version = "9.8.2", default-features = false, features = ["deflate"] }
 
 # Hidden prompts: a small termios reader on Unix (echo is disabled BEFORE the prompt prints,
 # and Ctrl-C is handled so the terminal is never left in no-echo mode); rpassword elsewhere.
