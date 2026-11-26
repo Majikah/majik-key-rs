@@ -2,6 +2,7 @@
 name = "majik-key"
 version = "1.1.1"
 edition = "2021"
+rust-version = "1.88"
 license = "Apache-2.0"
 description = "A post-quantum ready seed phrase account library for the Majikah ecosystem. Pure-Rust multi-key registry (X25519, Ed25519, ML-KEM, ML-DSA, SLH-DSA, BTC/ETH/SOL) derived from one BIP-39 mnemonic and protected with Argon2id."
 repository = "https://github.com/Majikah/majik-key-rs"
@@ -51,12 +52,12 @@ aes-gcm = "0.11.1"
 argon2 = "0.6.0"
 pbkdf2 = "0.13"
 hkdf = "0.13"
-sha2 = "0.11.1"
+sha2 = "0.11.2"
 
 # ── post-quantum ──
-ml-kem = { version = "0.3.2", features = ["getrandom"] }
-fips204 = "0.4.6"
-fips205 = "0.4"
+ml-kem = { version = "0.3.4", features = ["getrandom"] }
+fips204 = "0.5.0"
+fips205 = "0.5.0"
 
 # ── web3 (all pure Rust: RustCrypto secp256k1, no libsecp256k1 / C) ──
 bip32 = { version = "0.6.0", features = ["alloc"] }
@@ -67,8 +68,8 @@ bech32 = "0.12"
 bs58 = { version = "0.5", features = ["check"] }
 
 # ── cli (optional; enabled by the `cli` feature) ──
-clap = { version = "4", features = ["derive"], optional = true }
-unicode-normalization = { version = "0.1", optional = true }
+clap = { version = "4.6.10", features = ["derive"], optional = true }
+unicode-normalization = { version = "0.1.26", optional = true }
 
 # ── plumbing ──
 serde = { version = "1.0.229", features = ["derive"] }
@@ -76,19 +77,19 @@ serde_json = "1.0.154"
 base64 = "0.23.1"
 # Contact model (MajikKey::to_contact). `fetch` (reqwest) is only for group-photo URLs, so it stays off here.
 majik-contact = { version = "0.2.0", default-features = false }
-zeroize = { version = "1.9.1", features = ["zeroize_derive"] }
+zeroize = { version = "1.9.2", features = ["derive"] }
 getrandom = "0.4.3"
-jiff = "0.2.38"
+jiff = "1.0.3"
 thiserror = "2.0.21"
 zip = { version = "9.0.2", default-features = false, features = ["deflate"] }
 
 # Hidden prompts: a small termios reader on Unix (echo is disabled BEFORE the prompt prints,
 # and Ctrl-C is handled so the terminal is never left in no-echo mode); rpassword elsewhere.
 [target.'cfg(unix)'.dependencies]
-libc = { version = "0.2.190", optional = true }
+libc = { version = "0.2.191", optional = true }
 
 [target.'cfg(not(unix))'.dependencies]
-rpassword = { version = "7", optional = true }
+rpassword = { version = "7.5.5", optional = true }
 
 [dev-dependencies]
 hex = "0.4"
