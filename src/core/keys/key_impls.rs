@@ -207,7 +207,7 @@ macro_rules! slh_dsa_from_hkdf {
         let a = Zeroizing::new(<[u8; N]>::try_from(&seed[0..N]).unwrap());
         let b = Zeroizing::new(<[u8; N]>::try_from(&seed[N..2 * N]).unwrap());
         let c = Zeroizing::new(<[u8; N]>::try_from(&seed[2 * N..3 * N]).unwrap());
-        let (pk, sk) = fips205::$m::KG::keygen_with_seeds(&a, &b, &c);
+        let (pk, sk) = fips205::$m::KG::keygen_from_seed(&a, &b, &c);
         let sk_bytes = Zeroizing::new(sk.into_bytes());
         DerivedKeypair {
             public_key: pk.into_bytes().to_vec(),
